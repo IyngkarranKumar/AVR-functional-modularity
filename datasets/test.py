@@ -89,6 +89,59 @@ def display_matrices(source_dir,dest_dir,n_imgs = 1):
             save_path = os.path.join(cwd,dest_dir,name)
             plt.savefig(save_path,)
 
+#%%
+
+def matrix_vis(img_file,show=True,save=False,savedir=None):
+
+    data = np.load(img_file)
+    target = data['target']
+    images = data['image']; img_shape = images.shape[1:]
+
+    name = "+".join(img_file.split('/')[-3:])
+
+    fig,axs = plt.subplots(4,6,figsize = (10,10))
+    matrix_axs = [(0,0),(0,1),(0,2),
+                    (1,0),(1,1),(1,2),
+                    (2,0),(2,1),(2,2),
+                    (0,4),(0,5),
+                    (1,4),(1,5),
+                    (2,4),(2,5),
+                    (3,4),(3,5)] 
+
+    #prepare axes
+    for i in range(len(axs)):
+        for j in range(len(axs[i])):
+            ax = axs[i,j]
+            ax.tick_params(left=False,right=False,labelleft=False,
+                labelbottom=False,bottom=False)
+            if not [(x,y) for x,y in matrix_axs if x==i and y==j]:
+                ax.axis('off')
+
+    #create matrix
+    for img_idx in range(len(images)+1):
+        img_ax_idx = matrix_axs[img_idx]; ax = axs[img_ax_idx]
+        
+        if img_idx==8:
+            img = np.zeros(img_shape)
+            ax.imshow(img,cmap='binary')
+            continue
+        elif img_idx < 8:
+            img = images[img_idx]
+        elif img_idx > 8:
+            img = images[img_idx-1]
+
+        ax.imshow(img)
+
+    fig.suptitle(name,fontsize=15)
+    fig.tight_layout()
+        
+            #save
+    if save:
+        cwd = os.getcwd()
+        save_path = os.path.join(savedir,name)
+        plt.savefig(save_path,)
+
+
     
 
 #%% dev code
