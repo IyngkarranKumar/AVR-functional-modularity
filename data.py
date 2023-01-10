@@ -4,6 +4,7 @@ import torch
 import pytorch_lightning as pl
 import zipfile
 import os
+import idx2numpy
 
 from torchvision import transforms
 from torch.utils.data import Dataset,DataLoader
