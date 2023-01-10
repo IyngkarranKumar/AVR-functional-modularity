@@ -201,7 +201,7 @@ class IRAVENDataModule(pl.LightningDataModule):
 
 class MNISTCustomDataset(Dataset):
 
-    def __init__(self,mode='train',n=0):
+    def __init__(self,mode='train',n=0,transform=None):
 
         if mode=='train':
             self.img_path='datasets/MNIST/raw/train-images-idx3-ubyte'
@@ -214,6 +214,8 @@ class MNISTCustomDataset(Dataset):
         self.n=n
         label_arr=idx2numpy.convert_from_file(self.label_path)
         self.img_file_idxs=np.argwhere(label_arr==n)
+
+        self.transform=transform
         
 
     def __len__(self):
@@ -221,5 +223,9 @@ class MNISTCustomDataset(Dataset):
 
     def __getitem__(self,idx):
         img_arr=idx2numpy.convert_from_file(self.img_path)[self.img_file_idxs][idx]
+        if self.transform is not None:
+            img_arr=self.transform(img_arr)
+            img_arr=img_arr.permute(1,2,0)
+
         return img_arr,self.n
         
