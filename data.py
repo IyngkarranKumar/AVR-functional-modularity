@@ -7,85 +7,12 @@ import os
 import idx2numpy
 
 from torchvision import transforms
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset,DataLoader,Subset
 from glob import glob
 from skimage.transform import resize
 from scipy import misc
 
 #RAVEN module doesn't currently work
-class RD(Dataset):
-
-    def __init__(self,root_dir='datasets/RAVEN-10000/center_single',mode='train',transform=None,shuffle=True,img_size=224):
-        
-        self.root_dir=root_dir
-        self.mode=mode
-        self.transform=transform
-        self.shuffle=shuffle
-        self.embeddings = np.load(os.path.join(root_dir, 'embedding.npy'), allow_pickle=True)
-        self.img_size=img_size
-
-        glob_wildcard=self.root_dir+'/*'+self.mode+'.npz'
-        self.filenames=glob(glob_wildcard)
-
-    def __len__(self):
-        return len(self.filenames)
-
-    def __getitem__(self,idx):
-        data_path=self.filenames[idx]
-        data = np.load(data_path)
-        image = data["image"].reshape(16, 160, 160)
-        target = data["target"]
-        structure = data["structure"]
-        meta_target = data["meta_target"]
-        meta_structure = data["meta_structure"]
-
-        if self.shuffle:
-            context = image[:8, :, :]
-            choices = image[8:, :, :]
-            indices = range(8)
-            np.random.shuffle(list(indices))
-            new_target = indices.index(target)
-            new_choices = choices[indices, :, :]
-            image = np.concatenate((context, new_choices))
-            target = new_target
-        
-        resize_image = []
-        for idx in range(0, 16):
-            resize_image.append(resize(image[idx,:,:], (self.img_size, self.img_size)))
-        resize_image = np.stack(resize_image)
-        # image = resize(image, (16, 128, 128))
-        # meta_matrix = data["mata_matrix"]
-
-
-        embedding = torch.zeros((6, 300), dtype=torch.float)
-        indicator = torch.zeros(1, dtype=torch.float)
-        element_idx = 0
-        for element in structure:
-            if element != '/':
-                embedding[element_idx, :] = torch.tensor(self.embeddings.item().get(element), dtype=torch.float)
-                element_idx += 1
-        if element_idx == 6:
-            indicator[0] = 1.
-
-
-
-        # if meta_target.dtype == np.int8:
-        #     meta_target = meta_target.astype(np.uint8)
-        # if meta_structure.dtype == np.int8:
-        #     meta_structure = meta_structure.astype(np.uint8)
-    
-        del data
-        if self.transform:
-            resize_image = self.transform(resize_image)
-            # meta_matrix = self.transform(meta_matrix)
-            target = torch.tensor(target, dtype=torch.long)
-            meta_target=meta_target[:,None] #size agreement
-            meta_structure=meta_structure[:,None] #size agreement
-            meta_target = self.transform(meta_target)
-            meta_structure = self.transform(meta_structure)
-            # meta_target = torch.tensor(meta_target, dtype=torch.long)
-        return resize_image, target, meta_target, meta_structure
-
 class RAVENDataModule(pl.LightningDataModule):
 
     def __init__(self,batch_size=64):
@@ -228,4 +155,34 @@ class MNISTCustomDataset(Dataset):
             img_arr=img_arr.permute(1,2,0)
 
         return img_arr,self.n
+        
+class CustomDataModule(pl.LightningDataModule):
+
+    def __init__(self,n=0,dataset_frac=1.0,batch_size=64):
+        super().__init__()
+        self.n=n
+        self.dataset_frac=dataset_frac
+        self.batch_size=batch_size
+
+    def prepare_data(self):
+        pass
+
+    def setup(self):
+        
+        self.full_dataset=MNISTCustomDataset(n=self.n,transform=transforms.ToTensor())
+        dataset_idxs=np.random.choice(self.full_dataset.__len__(),int(self.full_dataset.__len__()*self.dataset_frac),replace=False)
+        self.dataset=Subset(self.full_dataset,dataset_idxs)
+
+        test_idxs=np.random.choice(self.dataset.__len__(),int(0.2*self.dataset.__len__()),replace=False)
+        train_idxs=np.setdiff1d(np.arange(self.dataset.__len__()),test_idxs)
+
+        self.train_dataset=Subset(self.dataset,train_idxs)
+        self.test_dataset=Subset(self.dataset,test_idxs)
+
+    def train_dataloader(self):
+        train_dataloader=DataLoader(self.train_dataset,shuffle=True,batch_size=self.batch_size)
+        return train_dataloader
+    
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset,shuffle=True,batch_size=self.batch_size)
         
