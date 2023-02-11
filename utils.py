@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import glob
+import torch
+import torch.nn.functional as F
 
 #%% 
 
@@ -57,3 +59,19 @@ def view_matrices(source_dir,type="train",n_view=1):
 
             fig.suptitle(name,fontsize=15)
             fig.tight_layout()
+
+def imshow(tens):
+    arr=tens.permute(1,2,0).numpy()
+    plt.imshow(arr)
+
+def calculate_accuracy(pred_logits,targets):
+    probs=F.softmax(pred_logits,dim=1)
+    pred=torch.argmax(probs,axis=1)
+    acc=(len(torch.nonzero(pred==targets))/len(pred))*100
+    return acc
+
+def sparsity(binary_mask_iter):
+    total=sum(torch.numel(b) for b in binary_mask_iter)
+    ones=sum(torch.count_nonzero(b) for b in binary_mask_iter)
+    sparsity=(total-ones)/total
+    return sparsity.item()
