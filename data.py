@@ -137,14 +137,25 @@ class MNISTCustomDataset(Dataset):
             self.img_path='datasets/MNIST/raw/t10k-images-idx3-ubyte'
             self.label_path='datasets/MNIST/raw/t10k-labels-idx1-ubyte'
 
-        assert n>=0 and n<=9
         self.n=n
         label_arr=idx2numpy.convert_from_file(self.label_path)
-        self.img_file_idxs=np.argwhere(label_arr==n)
-
         self.transform=transform
-        
 
+        if type(n)==int:
+            assert n>=0 and n<=9
+            self.img_file_idxs=np.argwhere(label_arr==n)
+        elif type(n)==list:
+            for num in n: 
+                assert num>0 and num<=9
+            self.img_file_idxs=[np.argwhere(label_arr==num) for num in n]
+            self.img_file_idxs=sorted((np.concatenate(self.img_file_idxs)))
+            self.labels=label_arr[self.img_file_idxs]
+
+
+
+
+
+    
     def __len__(self):
         return len(self.img_file_idxs)
 
@@ -152,9 +163,12 @@ class MNISTCustomDataset(Dataset):
         img_arr=idx2numpy.convert_from_file(self.img_path)[self.img_file_idxs][idx]
         if self.transform is not None:
             img_arr=self.transform(img_arr)
-            img_arr=img_arr.permute(1,2,0)
+            img_arr=img_arr.permute(1,2,0) #get to numpy (H,W,C)
 
-        return img_arr,self.n
+        if type(self.n)==int:
+            return img_arr,self.n
+        if type(self.n)==list:
+            return img_arr,(self.labels[idx]).squeeze()
         
 class CustomDataModule(pl.LightningDataModule):
 
@@ -170,9 +184,12 @@ class CustomDataModule(pl.LightningDataModule):
     def setup(self):
         
         self.full_dataset=MNISTCustomDataset(n=self.n,transform=transforms.ToTensor())
+
+        #create subset of full dataset if required
         dataset_idxs=np.random.choice(self.full_dataset.__len__(),int(self.full_dataset.__len__()*self.dataset_frac),replace=False)
         self.dataset=Subset(self.full_dataset,dataset_idxs)
-
+    
+        #create train and test
         test_idxs=np.random.choice(self.dataset.__len__(),int(0.2*self.dataset.__len__()),replace=False)
         train_idxs=np.setdiff1d(np.arange(self.dataset.__len__()),test_idxs)
 

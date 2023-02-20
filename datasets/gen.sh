@@ -9,8 +9,9 @@ source_dir=" "
 dest_dir="I-RAVEN/"
 new_file="custom_const.py"
 old_file="const.py"
-parent_store_dir="originals/"
-n=50
+
+parent_store_dir="triangles/"
+n=10
 
 python dir_edit.py --dest-dir $dest_dir --new-file $new_file --old-file $old_file --parent-store-dir=$parent_store_dir
 
