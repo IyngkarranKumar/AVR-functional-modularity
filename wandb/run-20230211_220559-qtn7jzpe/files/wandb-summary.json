@@ -1,1 +1,0 @@
-{"epoch": 4, "loss": 81771.6328125, "crossent_loss": 2.3025851249694824, "reg_loss": 204423.3125, "_timestamp": 1676153165.5820749, "_runtime": 5.575138807296753, "_step": 49, "_wandb": {"runtime": 4}}
