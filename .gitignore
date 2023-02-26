@@ -5,3 +5,4 @@ old_scripts
 datasets
 runs
 wandb
+model_ckpts
