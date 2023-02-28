@@ -6,3 +6,4 @@ datasets
 runs
 wandb
 model_ckpts
+logs

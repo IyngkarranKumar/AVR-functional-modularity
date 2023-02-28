@@ -7,7 +7,7 @@
 #SET THESE FOR DSET GENERATION
 
 parent_store_dir="originals/"
-n=1000
+n=10000
 
 
 
