@@ -64,7 +64,7 @@ def get_named_children(model):
 
 class AbstractMaskedModel(ABC):
 
-    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,savedir=None):
+    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,savedir=None,tau=1):
         
         self.model=model
         self.train_dataloader=train_dataloader
@@ -87,6 +87,7 @@ class AbstractMaskedModel(ABC):
 
         self.global_step=0
         self.train_epoch=0
+        self.tau=tau
 
     @abstractmethod
     def forward(self,x,invert_mask=False):
@@ -100,7 +101,7 @@ class AbstractMaskedModel(ABC):
 
         return crossent_loss,reg_loss,loss,acc
 
-    def train(self,alpha,tau=1,n_epochs=5,n_batches=5,batch_split=4,
+    def train(self,alpha,n_epochs=5,n_batches=5,batch_split=4,
                     val_every_n_steps=10,n_val_batches=100,
                     eval_every=10,n_eval_batches=5,
                     logging=False,set_log_name=False,save_freq=10):
@@ -308,7 +309,10 @@ class AbstractMaskedModel(ABC):
                 binary_bias=(~(binary_bias.bool())).int()
 
         masked_weight=self.param_dict[name+'.weight']*binary_weight
-        masked_bias=self.param_dict[name+'.bias']*binary_bias
+        if bias:
+            masked_bias=self.param_dict[name+'.bias']*binary_bias
+        else:
+            masked_bias=None
         out=F.conv2d(x,weight=masked_weight,bias=masked_bias,stride=stride,padding=padding)
         return out
 
@@ -345,7 +349,7 @@ class AbstractMaskedModel(ABC):
         masked_weight=self.param_dict[name+'.weight']*binary_weight
         masked_bias=self.param_dict[name+'.bias']*binary_bias
 
-        return F.layer_norm(normalized_shape=normalized_shape,weight=masked_weight,bias=masked_bias)
+        return F.layer_norm(x,normalized_shape=normalized_shape,weight=masked_weight,bias=masked_bias)
 
 
 
@@ -488,83 +492,94 @@ class MaskedSCLModel(AbstractMaskedModel):
         '''
 
 
-        x=self.MaskedConv2d(x,name='scl.vision.net.0',bias=True,invert=invert_mask)
-        x=self.MaskedBatchNorm2d(x,name='scl.vision.net.1',invert=invert_mask)
+        x=self.MaskedConv2d(x,name='vision.net.0',bias=True,invert=invert_mask)
+        x=self.MaskedBatchNorm2d(x,name='vision.net.1',invert=invert_mask)
 
-        x=self.MaskedConv2d(x,name='scl.vision.net.2',bias=True,invert=invert_mask)
-        x=self.MaskedBatchNorm2d(x,name='scl.vision.net.3',bias=True,invert=invert_mask)
+        x=self.MaskedConv2d(x,name='vision.net.2',bias=True,invert=invert_mask)
+        x=self.MaskedBatchNorm2d(x,name='vision.net.3',invert=invert_mask)
 
-        x=self.MaskedConv2d(x,name='scl.vision.net.4',bias=True,invert=invert_mask)
-        x=self.MaskedBatchNorm2d(x,name='scl.vision.net.5',bias=True,invert=invert_mask)
+        x=self.MaskedConv2d(x,name='vision.net.4',bias=True,invert=invert_mask)
+        x=self.MaskedBatchNorm2d(x,name='vision.net.5',invert=invert_mask)
 
-        x=self.MaskedConv2d(x,name='scl.vision.net.6',bias=True,invert=invert_mask)
-        x=self.MaskedBatchNorm2d(x,name='scl.vision.net.7',bias=True,invert=invert_mask)
+        x=self.MaskedConv2d(x,name='vision.net.6',bias=True,invert=invert_mask)
+        x=self.MaskedBatchNorm2d(x,name='vision.net.7',invert=invert_mask)
 
-        x_conv_out=self.MaskedConv2d(x,name='scl.vision.net.8',bias=True,invert=invert_mask)
+        x_conv_out=self.MaskedConv2d(x,name='vision.net.8',invert=invert_mask)
 
         x1=self.flatten_layer_vision(x_conv_out)
-        x1=self.MaskedLinear(x1,name='scl.vision.net.10',invert=invert_mask)
+        x1=self.MaskedLinear(x1,name='vision.net.10',invert=invert_mask)
         x1=self.relu(x1)
 
         #feedforward residual layer
-        x2=self.MaskedLinear(x1,name='scl.vision.net.12.net.0',invert=invert_mask)
-        x2=self.MaskedLayerNorm(x2,name='scl.vision.net.12.net.1',invert=invert_mask)
+        x2=self.MaskedLinear(x1,name='vision.net.12.net.0',invert=invert_mask)
+        x2=self.MaskedLayerNorm(x2,name='vision.net.12.net.1',invert=invert_mask)
         x2=self.relu(x2)
-        x2=self.MaskedLinear(x2,name='scl.vision.net.12.net.3',invert=invert_mask)
+        x2=self.MaskedLinear(x2,name='vision.net.12.net.3',invert=invert_mask)
         out=x2+x1
         
         return out
 
     def MaskedAttrNet(self,x,invert_mask=False):
         
-        shape,heads=x.shape,self.model.scl.attr_heads
+        shape,heads=x.shape,self.model.attr_heads
         dim=shape[-1]
 
         #scattering transform
-        x=x.reshape(-1,heads,dim//heads)
-        x=self.MaskedLinear(x,name='scl.attr_net.mlp.net.0',invert=invert_mask)
+        x=x.reshape(-1,heads,dim // heads)
+        x=self.MaskedLinear(x,name='attr_net.mlp.net.0',invert=invert_mask)
         x=self.relu(x)
-        x=self.MaskedLinear(x,name='scl.attr_net.mlp.net.2',invert=invert_mask)
+        x=self.MaskedLinear(x,name='attr_net.mlp.net.2',invert=invert_mask)
+        x=x.reshape(shape)
 
         #feed forward residual net
-        x1=self.MaskedLinear(x,name= 'scl.ff_residual.net.0',invert=invert_mask)
-        x1=self.MaskedLayerNorm(x1,name= 'scl.ff_residual.net.1',invert=invert_mask)
+        x1=self.MaskedLinear(x,name= 'ff_residual.net.0',invert=invert_mask)
+        x1=self.MaskedLayerNorm(x1,name= 'ff_residual.net.1',invert=invert_mask)
         x1=self.relu(x1)
-        x1=self.MaskedLinear(x1,name= 'scl.ff_residual.net.3',invert=invert_mask)
+        x1=self.MaskedLinear(x1,name= 'ff_residual.net.3',invert=invert_mask)
         out=x+x1
+
+        return out
 
 
     def MaskedRelNet(self,x,invert_mask=False):
 
-        x=self.MaskedLinear(x,name= 'scl.rel_net.net.0',invert=invert_mask)
+        x=self.MaskedLinear(x,name= 'rel_net.net.0',invert=invert_mask)
         x=self.relu(x)
-        x=self.MaskedLinear(x,name= 'scl.rel_net.net.2',invert=invert_mask)
+        x=self.MaskedLinear(x,name= 'rel_net.net.2',invert=invert_mask)
         x=self.relu(x)
-        self.MaskedLinear(x,name= 'scl.rel_net.net.4',invert=invert_mask)
+        x=self.MaskedLinear(x,name= 'rel_net.net.4',invert=invert_mask)
 
         return x
 
     def MaskedToLogit(self,x,invert_mask=False):
 
-        x=self.MaskedLinear(x,name='scl.to_logit',invert=invert_mask)
-        return X
+        x=self.MaskedLinear(x,name='to_logit',invert=invert_mask)
+        return x
 
 
+    def preprocess(self,x):
 
+        questions,answers=x[:,0:8:,:,:,].unsqueeze(2),x[:,8:,:,:,].unsqueeze(2)
+        answers=answers.unsqueeze(2)
+        questions=utils.expand_dim(questions, dim=1, k=8)
+        permutations=torch.cat((questions, answers), dim=2)
+
+        return permutations
 
 
     def forward(self, x, invert_mask=False):
 
+        x=self.preprocess(x)
         b,m,n,c,h,w=x.shape
-        images=x.view(-1,c,h,w)
+        x=x.view(-1,c,h,w)
 
 
         features=self.MaskedVisionNet(x,invert_mask=invert_mask)
 
-        attrs=self.MaskedAttrNet(x,invert_mask=invert_mask)
-        attrs=attrs.reshape(b,m,n,self.model.scl.rel_heads,-1).transpose(-2,-3).flatten(3)
+        attrs=self.MaskedAttrNet(features,invert_mask=invert_mask)
+        attrs=attrs.reshape(b,m,n,self.model.rel_heads,-1).transpose(-2,-3).flatten(3)
 
-        rels=self.MaskedRelNet(x,invert_mask=invert_mask)
+        rels=self.MaskedRelNet(attrs,invert_mask=invert_mask)
         rels=rels.flatten(2)
 
         logits=self.MaskedToLogit(rels).flatten(1)

@@ -205,3 +205,15 @@ def plot_metrics():
 
 
 
+def num_model_parameters(model):
+    num_params=0
+    for p in model.parameters():
+        num_params+=(torch.prod(torch.tensor(p.shape))).item()
+    return num_params
+
+
+def expand_dim(t, dim, k):
+    t = t.unsqueeze(dim)
+    expand_shape = [-1] * len(t.shape)
+    expand_shape[dim] = k
+    return t.expand(*expand_shape)
