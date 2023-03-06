@@ -8,25 +8,33 @@ import numpy as np
 import data
 import utils
 import sys
-import importlib
-import pickle
 import wandb
 import copy
+import pickle
 
 from torch import nn
 from torch.nn import functional as F
 from torchvision import transforms
 from torchvision.datasets import MNIST
+from abc import ABC,abstractmethod
 from torch.utils.data import DataLoader, Subset
 from copy import deepcopy
 from torch.special import logit
 from pytorch_lightning import loggers as pl_loggers
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.tensorboard import SummaryWriter
-from abc import ABC,abstractmethod
+from pytorch_lightning.loggers import WandbLogger
+from timeit import default_timer as timer
 
 importlib.reload(data)
 importlib.reload(utils)
 
+pl.seed_everything(42)
+
+debug=False
+
+device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def get_children(model: torch.nn.Module):
     # get children form model!
@@ -109,7 +117,7 @@ class AbstractMaskedModel(ABC):
 
             #set class attributes for use in rest of class
             self.alpha=alpha
-            self.tau=tau
+            self.tau=1
             
             if logging:
                 self.logging=True
@@ -199,7 +207,7 @@ class AbstractMaskedModel(ABC):
             if batch_idx==n_batches:
                 break
 
-            x,y=batch
+            x,y,*rest=batch
             with torch.no_grad():
                 y_hat=self.forward(x)
             crossent_loss,reg_loss,loss,acc=self.calculate_loss(y_hat,y)
@@ -241,8 +249,8 @@ class AbstractMaskedModel(ABC):
                 pass
             if batch_idx==n_batches:
                 break
-            x1,y1=batch1
-            x2,y2=batch2
+            x1,y1,*rest=batch1
+            x2,y2,*rest=batch2
 
 
             pred_logits_1=self.forward(x1,invert_mask=True)
@@ -329,10 +337,11 @@ class AbstractMaskedModel(ABC):
         if invert:
             binary_weight=(~(binary_weight.bool())).int()
             binary_bias=(~(binary_bias.bool())).int()
+
         
         masked_weight=self.param_dict[name+'.weight']*binary_weight
         masked_bias=self.param_dict[name+'.bias']*binary_bias
-        return F.batch_norm(x,running_mean=running_mean,running_var=running_var,weight=masked_weight,bias=binary_bias)
+        return F.batch_norm(x,running_mean=running_mean,running_var=running_var,weight=masked_weight,bias=masked_bias)
 
     def MaskedLayerNorm(self,x,name,invert=False):
 
@@ -348,11 +357,10 @@ class AbstractMaskedModel(ABC):
         
         masked_weight=self.param_dict[name+'.weight']*binary_weight
         masked_bias=self.param_dict[name+'.bias']*binary_bias
+        
+        
 
         return F.layer_norm(x,normalized_shape=normalized_shape,weight=masked_weight,bias=masked_bias)
-
-
-
 
     def transform_logit_tensors(self):
 
@@ -380,7 +388,7 @@ class AbstractMaskedModel(ABC):
     def save(self):
 
         if not os.path.isdir(self.savedir):
-            os.mkdir(self.savedir)
+            os.makedirs(self.savedir)
 
         save_dict={}
         save_dict['alpha']=self.alpha
@@ -433,7 +441,6 @@ class MaskedMNISTFFN(AbstractMaskedModel):
         x4=self.MaskedLinear(x3,name='layers.4',invert=invert_mask)
 
         return x4
-
 
 
 class MaskedMNISTConv(AbstractMaskedModel):

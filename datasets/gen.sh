@@ -2,12 +2,12 @@
 
 #set up directory structure using python file
 
-#bash gen.sh
+#TO RUN: bash gen.sh
 
 #SET THESE FOR DSET GENERATION
 
-parent_store_dir="originals/"
-n=10000
+parent_store_dir="squares/"
+n=10
 
 
 
@@ -28,9 +28,9 @@ for val in $list; do
     if [ $val == "train" ]
         then let num=($n*7)/10
     elif [ $val == "test" ]
-        then let num=($n*2)/10
+        then let num=($n*3)/10
     else
-        let num=($n*1)/10
+        let num=($n*0)/10
     fi
     
     path=$parent_store_dir$val;
