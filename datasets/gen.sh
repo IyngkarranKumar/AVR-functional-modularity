@@ -6,8 +6,8 @@
 
 #SET THESE FOR DSET GENERATION
 
-parent_store_dir="squares/"
-n=10
+parent_store_dir="big/"
+n=1000
 
 
 

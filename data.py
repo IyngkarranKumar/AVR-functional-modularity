@@ -4,6 +4,7 @@ import torch
 import pytorch_lightning as pl
 import zipfile
 import os
+import random
 import idx2numpy
 
 from torchvision import transforms
@@ -100,8 +101,9 @@ class IRAVENDataset(Dataset):
 
 class IRAVENDataModule(pl.LightningDataModule):
     
-    def __init__(self,batch_size=8):
+    def __init__(self,batch_size=8,split=None):
         self.batch_size=batch_size
+        self.split=split
 
     def prepare_data(self)->None:
         #assume data already downloaded
@@ -109,10 +111,28 @@ class IRAVENDataModule(pl.LightningDataModule):
 
     def setup(self,root_dir='datasets/originals',transform=transforms.Compose([transforms.ToTensor()])):
 
-
         self.IRAVEN_train=IRAVENDataset(root=root_dir,mode='train',transform=transform)
         self.IRAVEN_val=IRAVENDataset(root=root_dir,mode='val',transform=transform)
         self.IRAVEN_test=IRAVENDataset(root=root_dir,mode='test',transform=transform)
+
+        if self.split==None:
+            pass
+        else:
+            filenames=self.IRAVEN_train.filenames + self.IRAVEN_test.filenames + self.IRAVEN_val.filenames
+            random.shuffle(filenames)
+            dataset_idx = lambda x: int(np.floor(len(filenames)*(x/100)))
+            train_idx,test_idx,val_idx= dataset_idx(self.split[0]),dataset_idx(self.split[1]),dataset_idx(self.split[2])
+
+            #+1's to account for floor rounding
+            new_train_filenames=filenames[:train_idx+1]
+            new_test_filenames=filenames[train_idx+1:(train_idx+1)+(test_idx+1)] 
+            new_val_filenames=filenames[(train_idx+1)+(test_idx+1):]
+
+            self.IRAVEN_train.filenames=new_train_filenames
+            self.IRAVEN_test.filenames=new_test_filenames
+            self.IRAVEN_val.filenames=new_val_filenames
+
+
 
     def train_dataloader(self):
         IRAVEN_train=DataLoader(self.IRAVEN_train,batch_size=self.batch_size)
@@ -203,3 +223,4 @@ class CustomDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset,shuffle=True,batch_size=self.batch_size)
         
+

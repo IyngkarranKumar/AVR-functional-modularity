@@ -22,14 +22,14 @@ UNI_MIN = 0
 UNI_MAX = len(UNI_VALUES) - 1
 
 # Type
-#TYPE_VALUES = ["none","triangle", "square", "pentagon", "hexagon", "circle"]
-TYPE_VALUES = ["none", "square"]
+TYPE_VALUES = ["none","triangle", "square", "pentagon", "hexagon", "circle"]
+#TYPE_VALUES = ["none", "square"]
 TYPE_MIN = 0
 TYPE_MAX = len(TYPE_VALUES) - 1
 
 # Size
-SIZE_VALUES = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-#SIZE_VALUES = [0.4,0.4,0.4,0.4]
+#SIZE_VALUES = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+SIZE_VALUES = [0.75,0.80,0.85,0.90]
 SIZE_MIN = 0
 SIZE_MAX = len(SIZE_VALUES) - 1
 
