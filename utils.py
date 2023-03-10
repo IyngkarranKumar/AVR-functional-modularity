@@ -7,6 +7,8 @@ import glob
 import torch
 import torch.nn.functional as F
 import random
+import io
+import pickle
 
 #%% 
 
@@ -154,15 +156,6 @@ def sparsity(mask):
 
     return (num_ones/numel).item()
 
-def importance(mask):
-
-    return random.random()
-
-def localisation(mask):
-    
-    return random.random()
-
-
 def get_metrics(mask):
 
     return (sparsity(mask),importance(mask),localisation(mask))
@@ -203,8 +196,6 @@ def plot_metrics():
 
 
 
-
-
 def num_model_parameters(model):
     num_params=0
     for p in model.parameters():
@@ -217,3 +208,25 @@ def expand_dim(t, dim, k):
     expand_shape = [-1] * len(t.shape)
     expand_shape[dim] = k
     return t.expand(*expand_shape)
+
+
+class CPU_Unpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        else: return super().find_class(module, name)
+
+def get_SCL_state_dict(path,train_wrapper=True):
+    with open(path,'rb') as f:
+        contents=CPU_Unpickler(f).load()
+
+    state_dict=contents['model state dict']
+    #assume SCL trained with training wrapper. Must edit key names
+    values=list(state_dict.values())
+    keys=list(state_dict.keys())
+    new_keys=[s.lstrip('scl.') for s in keys]
+
+    state_dict=dict(zip(new_keys,values))
+
+    return state_dict
+

@@ -7,3 +7,4 @@ runs
 wandb
 model_ckpts
 logs
+masks

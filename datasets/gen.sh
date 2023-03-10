@@ -6,7 +6,7 @@
 
 #SET THESE FOR DSET GENERATION
 
-parent_store_dir="big/"
+parent_store_dir="originals_masking"
 n=1000
 
 
