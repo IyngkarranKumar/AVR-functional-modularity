@@ -34,8 +34,6 @@ pl.seed_everything(42)
 
 debug=False
 
-device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
 def get_children(model: torch.nn.Module):
     # get children form model!
     children = list(model.children())
@@ -72,12 +70,14 @@ def get_named_children(model):
 
 class AbstractMaskedModel(ABC):
 
-    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,savedir=None,tau=1):
+    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,device,savedir=None,tau=1):
         
         self.model=model
         self.train_dataloader=train_dataloader
         self.test_dataloader1=test_dataloader1
         self.test_dataloader2=test_dataloader2
+        self.device=device
+        self.model.to(self.device)
         #freeze model parameters
         for p in model.parameters():
             p.requires_grad=False
@@ -86,7 +86,7 @@ class AbstractMaskedModel(ABC):
         self.savedir=savedir
 
 
-        self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,0.9)) for k,p in model.named_parameters()}
+        self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,0.9,device=self.device)) for k,p in model.named_parameters()}
         self.alpha=None
         self.logging=False #this attribute and below are set during training/loading
         self.logger=None
@@ -140,6 +140,7 @@ class AbstractMaskedModel(ABC):
             for epoch in range(self.train_epoch,n_epochs):
                 start_time=timer()
                 for batch_idx,batch in enumerate(self.train_dataloader):
+                    print(f'Starting train batch {batch_idx}')
                     if n_batches=='full':
                         pass
                     if batch_idx==n_batches:
@@ -147,10 +148,13 @@ class AbstractMaskedModel(ABC):
 
 
                     train_loss=0
-                    split_X,split_y=torch.chunk(batch[0],batch_split),torch.chunk(batch[1],batch_split)
-                    for x,y in zip(split_X,split_y):
-                        y_hat=self.forward(x)
-                        crossent_loss,reg_loss,loss,acc=self.calculate_loss(y_hat,y)
+                    x,y,*rest=batch
+                    x,y=x.to(self.device),y.to(self.device)
+                    split_X,split_y=torch.chunk(x,batch_split),torch.chunk(y,batch_split)
+
+                    for x_,y_ in zip(split_X,split_y):
+                        y_hat=self.forward(x_)
+                        crossent_loss,reg_loss,loss,acc=self.calculate_loss(y_hat,y_)
                         train_loss+=loss.item()
                         loss.backward()
 
@@ -203,12 +207,14 @@ class AbstractMaskedModel(ABC):
         val_accs=[]
 
         for batch_idx,batch in enumerate(self.test_dataloader1):
+            print(f'Starting train batch {batch_idx}')
             if n_batches=='full':
                 pass
             if batch_idx==n_batches:
                 break
 
             x,y,*rest=batch
+            x,y=x.to(self.device),y.to(self.device)
             with torch.no_grad():
                 y_hat=self.forward(x)
             crossent_loss,reg_loss,loss,acc=self.calculate_loss(y_hat,y)
@@ -250,6 +256,8 @@ class AbstractMaskedModel(ABC):
                 break
             x1,y1,*rest=batch1
             x2,y2,*rest=batch2
+            x1,y1=x1.to(self.device),y1.to(self.device)
+            x2,y2=x2.to(self.device),y2.to(self.device)
 
 
             pred_logits_1=self.forward(x1,invert_mask=True)
@@ -364,8 +372,8 @@ class AbstractMaskedModel(ABC):
 
         tau=self.tau
 
-        U1 = torch.rand(1, requires_grad=True)
-        U2 = torch.rand(1, requires_grad=True)
+        U1 = torch.rand(1, requires_grad=True).to(self.device)
+        U2 = torch.rand(1, requires_grad=True).to(self.device) 
 
         samples={}
         for k,v in self.logit_tensors_dict.items():
