@@ -90,6 +90,7 @@ class AbstractMaskedModel(ABC):
         self.alpha=None
         self.logging=False #this attribute and below are set during training/loading
         self.logger=None
+        self.log_dict=None
         self.run_id=None
         self.optimiser=torch.optim.Adam(self.logit_tensors_dict.values())
 
@@ -133,9 +134,8 @@ class AbstractMaskedModel(ABC):
                     self.logger=wandb.init(id=self.run_id,project='AVR',resume='must')
                 else:
                     self.logger=wandb.init(project='AVR',name=log_name)
-                wandb.define_metric('global step')
 
-                log_dict={}
+                self.log_dict={}
 
             for epoch in range(self.train_epoch,n_epochs):
                 start_time=timer()
@@ -154,20 +154,10 @@ class AbstractMaskedModel(ABC):
                         train_loss+=loss.item()
                         loss.backward()
 
-                        log_dict['Loss/train']
-
                     self.optimiser.step()
 
                     if self.logging:
-                        '''
-                        wandb.log({'epoch':epoch,
-                                    'train_loss':train_loss,
-                                    },step=self.global_step)
-                        '''
-
-                        log_dict['Loss/train']=train_loss
-                        wandb.define_metric('train_loss',step_metric='global_step')
-                        wandb.log({'Loss/train':train_loss,'global_step':self.global_step})
+                        self.log_dict['Loss/train']=train_loss
 
                     if (self.global_step%val_every_n_steps==0) and (self.global_step!=0):
                         self.validation(n_batches=n_val_batches)
@@ -191,7 +181,7 @@ class AbstractMaskedModel(ABC):
 
                 #logging
                 if self.logging:
-                    wandb.log(log_dict)
+                    wandb.log(self.log_dict)
 
                 
                 #save every n_save epochs
@@ -231,15 +221,13 @@ class AbstractMaskedModel(ABC):
         val_accuracy=np.mean(val_accs)
 
         if self.logging:
-                wandb.log({
+            self.log_dict.update({
                             'Loss/validation':val_loss,
                             'Loss/validation_cross_entropy':val_crossent_loss,
                             'Loss/validation_reg':val_reg_loss,
                             'Accuracy/validation':val_accuracy
                             })
-        else:
-            #print(f'\n Validation accuracy: {acc}')
-            pass
+
 
         
 
@@ -276,8 +264,7 @@ class AbstractMaskedModel(ABC):
         acc2=round(np.mean(acc2s),2)
 
         if self.logging:
-            wandb.define_metric("Eval accuracies",step_metric='epoch')
-            wandb.log({'Accuracy/Eval':{"Task":acc1,"NOT task":acc2}},step=self.global_step)
+            self.log_dict.update({'Ablation/Task':acc1,'Ablation/NOT Task':acc2})
         else:
             print({"Acc task'":acc1,"Acc not task":acc2})
 
