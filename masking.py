@@ -135,6 +135,8 @@ class AbstractMaskedModel(ABC):
                     self.logger=wandb.init(project='AVR',name=log_name)
                 wandb.define_metric('global step')
 
+                log_dict={}
+
             for epoch in range(self.train_epoch,n_epochs):
                 start_time=timer()
                 for batch_idx,batch in enumerate(self.train_dataloader):
@@ -152,6 +154,8 @@ class AbstractMaskedModel(ABC):
                         train_loss+=loss.item()
                         loss.backward()
 
+                        log_dict['Loss/train']
+
                     self.optimiser.step()
 
                     if self.logging:
@@ -160,8 +164,10 @@ class AbstractMaskedModel(ABC):
                                     'train_loss':train_loss,
                                     },step=self.global_step)
                         '''
+
+                        log_dict['Loss/train']=train_loss
                         wandb.define_metric('train_loss',step_metric='global_step')
-                        wandb.log({'train_loss':train_loss,'global_step':self.global_step})
+                        wandb.log({'Loss/train':train_loss,'global_step':self.global_step})
 
                     if (self.global_step%val_every_n_steps==0) and (self.global_step!=0):
                         self.validation(n_batches=n_val_batches)
@@ -181,6 +187,11 @@ class AbstractMaskedModel(ABC):
                     train_time=end_train_time-start_time
                     eval_time=end_eval_time-end_train_time
                     print(f'Train time: {train_time} \n Eval time:{eval_time}')
+
+
+                #logging
+                if self.logging:
+                    wandb.log(log_dict)
 
                 
                 #save every n_save epochs
@@ -221,10 +232,10 @@ class AbstractMaskedModel(ABC):
 
         if self.logging:
                 wandb.log({
-                            'validation_loss':val_loss,
-                            'validation_crossent_loss':val_crossent_loss,
-                            'validation_reg_loss':val_reg_loss,
-                            'validation_accuracy':val_accuracy
+                            'Loss/validation':val_loss,
+                            'Loss/validation_cross_entropy':val_crossent_loss,
+                            'Loss/validation_reg':val_reg_loss,
+                            'Accuracy/validation':val_accuracy
                             })
         else:
             #print(f'\n Validation accuracy: {acc}')
@@ -266,7 +277,7 @@ class AbstractMaskedModel(ABC):
 
         if self.logging:
             wandb.define_metric("Eval accuracies",step_metric='epoch')
-            wandb.log({'Eval accuracies':{"Task":acc1,"NOT task":acc2}},step=self.global_step)
+            wandb.log({'Accuracy/Eval':{"Task":acc1,"NOT task":acc2}},step=self.global_step)
         else:
             print({"Acc task'":acc1,"Acc not task":acc2})
 
