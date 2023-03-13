@@ -98,7 +98,7 @@ def get_named_children(model):
 
 def transform_logit_tensors(logit_dict,tau=1):
 
-
+    with torch.no_grad():
         U1 = torch.rand(1, requires_grad=True)
         U2 = torch.rand(1, requires_grad=True)
 
@@ -116,7 +116,7 @@ def transform_logit_tensors(logit_dict,tau=1):
         for k,v in binaries_stop.items():
             binaries[k]=v+samples[k]
 
-        return binaries
+    return binaries
 
 
 

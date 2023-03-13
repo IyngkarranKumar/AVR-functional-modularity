@@ -175,7 +175,7 @@ class AbstractMaskedModel(ABC):
                         self.log_dict.update(train_log_dict)
 
                     #val
-                    if (self.global_step%val_every_n_steps==0) and (self.global_step!=0):
+                    if (self.global_step%val_every_n_steps==0):
                         self.validation(n_batches=n_val_batches)
 
                     #ablation
@@ -215,35 +215,54 @@ class AbstractMaskedModel(ABC):
     def validation(self,n_batches):
         batch=next(iter(self.test_dataloader1))
 
-        losses=[]
-        val_accs=[]
+        losses1=[]
+        val_accs1=[]
+        losses2=[] #2 index refers to not-task
+        val_accs2=[]
 
-        for batch_idx,batch in enumerate(self.test_dataloader1):
+        for batch_idx,(batch_task,batch_not_task) in enumerate(zip(self.test_dataloader1,self.test_dataloader2)):
             print(f'Starting validation batch {batch_idx}')
             if n_batches=='full':
                 pass
             if batch_idx==n_batches:
                 break
 
-            x,y,*rest=batch
-            x,y=x.to(self.device),y.to(self.device)
-            with torch.no_grad():
-                y_hat=self.forward(x)
-            crossent_loss,reg_loss,loss,acc=self.calculate_loss(y_hat,y)
-            losses.append((crossent_loss.item(),reg_loss.item(),loss.item()))
-            val_accs.append(acc)
+            x1,y1,*rest1=batch_task
+            x2,y2,*rest2=batch_not_task
+            x1,y1,x2,y2=x1.to(self.device),y1.to(self.device),x2.to(self.device),y2.to(self.device)
 
-        val_crossent_loss=np.mean([_[0] for _ in losses])
-        val_reg_loss=np.mean([_[1] for _ in losses])
-        val_loss=np.mean([_[2] for _ in losses])
-        val_accuracy=np.mean(val_accs)
+            with torch.no_grad():
+                y_hat1=self.forward(x1)
+                crossent_loss1,reg_loss1,loss1,acc1=self.calculate_loss(y_hat1,y1)
+                losses1.append((crossent_loss1.item(),reg_loss1.item(),loss1.item()))
+                val_accs1.append(acc1)
+
+                y_hat2=self.forward(x2)
+                crossent_loss2,reg_loss2,loss2,acc2=self.calculate_loss(y_hat2,y2)
+                losses2.append((crossent_loss2.item(),reg_loss2.item(),loss2.item()))
+                val_accs2.append(acc2)
+
+            val_crossent_loss1=np.mean([_[0] for _ in losses1])
+            val_reg_loss1=np.mean([_[1] for _ in losses1])
+            val_loss1=np.mean([_[2] for _ in losses1])
+            val_accuracy1=np.mean(val_accs1)
+
+            val_crossent_loss2=np.mean([_[0] for _ in losses2])
+            val_reg_loss2=np.mean([_[1] for _ in losses2])
+            val_loss2=np.mean([_[2] for _ in losses2])
+            val_accuracy2=np.mean(val_accs2)
+            
 
         if self.logging:
             self.log_dict.update({
-                            'Loss/validation':val_loss,
-                            'Loss/validation_cross_entropy':val_crossent_loss,
-                            'Loss/validation_reg':val_reg_loss,
-                            'Accuracy/validation':val_accuracy
+                            'Loss/validation_task':val_loss1,
+                            'Loss/validation_cross_entropy_task':val_crossent_loss1,
+                            'Loss/validation_reg_task':val_reg_loss1,
+                            'Accuracy/validation_task':val_accuracy1,
+                            'Loss/validation_not_task':val_loss2,
+                            'Loss/validation_cross_entropy_not_task':val_crossent_loss2,
+                            'Loss/validation_reg_not_task':val_reg_loss2,
+                            'Accuracy/validation_not_task':val_accuracy2
                             })
 
 
