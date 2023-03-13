@@ -5,6 +5,9 @@ import matplotlib.pyplot
 
 paths=[]
 
+def get_modal_mask(mask):
+    pass
+
 def identify_shared_weights():
     pass
 

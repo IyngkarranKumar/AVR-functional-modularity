@@ -23,7 +23,6 @@ from torch.special import logit
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
-from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import WandbLogger
 from timeit import default_timer as timer
 
@@ -112,7 +111,7 @@ class AbstractMaskedModel(ABC):
 
     def train(self,alpha,n_epochs=5,n_batches=5,batch_split=4,
                     val_every_n_steps=10,n_val_batches=100,
-                    eval_every=10,n_eval_batches=5,
+                    eval_every_n_steps=10,n_eval_batches=5,
                     logging=False,set_log_name=False,save_freq=10):
 
 
@@ -147,45 +146,58 @@ class AbstractMaskedModel(ABC):
                         break
 
 
-                    train_loss=0
+                    train_loss=train_crossent_loss=train_reg_loss=0
+
                     x,y,*rest=batch
                     x,y=x.to(self.device),y.to(self.device)
                     split_X,split_y=torch.chunk(x,batch_split),torch.chunk(y,batch_split)
 
+                    logits=[]
                     for x_,y_ in zip(split_X,split_y):
                         y_hat=self.forward(x_)
-                        crossent_loss,reg_loss,loss,acc=self.calculate_loss(y_hat,y_)
+                        logits.append(y_hat)
+                        crossent_loss,reg_loss,loss,_=self.calculate_loss(y_hat,y_)
                         train_loss+=loss.item()
-                        loss.backward()
+                        train_crossent_loss+=crossent_loss.item()
+                        train_reg_loss+=reg_loss.item()
+                        loss.backward() #accumulate losses
+                    train_acc=utils.calculate_accuracy(torch.concatenate(logits),y) #calculate accuracy over whole batch, rather than sub-batches
 
                     self.optimiser.step()
 
                     if self.logging:
-                        self.log_dict['Loss/train']=train_loss
+                        train_log_dict={
+                            'Loss/train':train_loss,
+                            'Loss/train_cross_entropy':train_crossent_loss,
+                            'Loss/train_reg':train_reg_loss,
+                            'Accuracy/train':train_acc,
+                        }
+                        self.log_dict.update(train_log_dict)
 
+                    #val
                     if (self.global_step%val_every_n_steps==0) and (self.global_step!=0):
                         self.validation(n_batches=n_val_batches)
+
+                    #ablation
+                    if (epoch%eval_every_n_steps==0) and (epoch!=0):
+                        self.eval(self.test_dataloader1,self.test_dataloader2,n_batches=n_eval_batches)
+                        end_eval_time=timer()
+
+
+                    #logging
+                    if self.logging:
+                        wandb.log(self.log_dict)
+
+
 
                     self.global_step+=1
                     
 
-                end_train_time=timer()
 
 
 
-                #run ablation every n_ablation epochs
-                if (epoch%eval_every==0) and (epoch!=0):
-                    self.eval(self.test_dataloader1,self.test_dataloader2,n_batches=n_eval_batches)
-                    end_eval_time=timer()
-
-                    train_time=end_train_time-start_time
-                    eval_time=end_eval_time-end_train_time
-                    print(f'Train time: {train_time} \n Eval time:{eval_time}')
 
 
-                #logging
-                if self.logging:
-                    wandb.log(self.log_dict)
 
                 
                 #save every n_save epochs
@@ -207,7 +219,7 @@ class AbstractMaskedModel(ABC):
         val_accs=[]
 
         for batch_idx,batch in enumerate(self.test_dataloader1):
-            print(f'Starting train batch {batch_idx}')
+            print(f'Starting validation batch {batch_idx}')
             if n_batches=='full':
                 pass
             if batch_idx==n_batches:
@@ -280,7 +292,7 @@ class AbstractMaskedModel(ABC):
     def MaskedLinear(self,x,name,invert=False):
 
         '''
-        Think invert detaches tensor from comp graph, so should only be used during val
+        Think invert detaches tensor from comp graph, so should only be used during ablation
         '''
         binaries=self.transform_logit_tensors() #we could just update binaries every training step
         binary_weight,binary_bias=binaries[name+'.weight'],binaries[name+'.bias']
@@ -373,7 +385,8 @@ class AbstractMaskedModel(ABC):
         tau=self.tau
 
         U1 = torch.rand(1, requires_grad=True).to(self.device)
-        U2 = torch.rand(1, requires_grad=True).to(self.device) 
+        U2 = torch.rand(1, requires_grad=True).to(self.device)
+
 
         samples={}
         for k,v in self.logit_tensors_dict.items():
