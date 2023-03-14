@@ -86,6 +86,7 @@ class AbstractMaskedModel(ABC):
 
 
         self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,0.9,device=self.device)) for k,p in model.named_parameters()}
+        self.binaries=None
         self.alpha=None
         self.logging=False #this attribute and below are set during training/loading
         self.logger=None
@@ -310,29 +311,18 @@ class AbstractMaskedModel(ABC):
 
     def MaskedLinear(self,x,name,invert=False):
 
-        '''
-        Think invert detaches tensor from comp graph, so should only be used during ablation
-        '''
-        binaries=self.transform_logit_tensors() #we could just update binaries every training step
-        binary_weight,binary_bias=binaries[name+'.weight'],binaries[name+'.bias']
+
+
+        binary_weight,binary_bias=self.binaries[name+'.weight'],self.binaries[name+'.bias']
         if invert:
             binary_weight=(~(binary_weight.bool())).int()
             binary_bias=(~(binary_bias.bool())).int()
-
-            '''
-            idxs0_w,idxs1_w=binary_weight==0.0,binary_weight==1.0
-            idxs0_b,idxs1_b=binary_bias==0.0,binary_bias==0.0
-            binary_weight[idxs0_w]+=1.0
-            binary_weight[idxs1_w]-=-1.0
-            binary_bias[idxs0_b]=+1.0
-            binary_bias[idxs1_b]-=1.0
-            '''
 
         masked_weight,masked_bias=self.param_dict[name+'.weight']*binary_weight,self.param_dict[name+'.bias']*binary_bias
         out=F.linear(x,weight=masked_weight,bias=masked_bias)
         return out
 
-    def MaskedConv2d(self,x,name,bias=False,invert=False):
+    def MaskedConv2d(self,x,name,bias=True,invert=False):
 
         '''
         invert detaches tensor from comp graph, so should only be used during val
@@ -340,11 +330,10 @@ class AbstractMaskedModel(ABC):
 
         stride,padding=self.leaf_modules[name].stride,self.leaf_modules[name].padding
 
-        binaries=self.transform_logit_tensors()
-        binary_weight=binaries[name+'.weight']
+        binary_weight=self.binaries[name+'.weight']
 
         if bias:
-            binary_bias=binaries[name+'.bias']
+            binary_bias=self.binaries[name+'.bias']
         else:
             masked_bias=None
 
@@ -367,9 +356,8 @@ class AbstractMaskedModel(ABC):
         running_mean=self.leaf_modules[name].running_mean
         running_var=self.leaf_modules[name].running_var 
 
-        binaries=self.transform_logit_tensors()
-        binary_weight=binaries[name+'.weight']
-        binary_bias=binaries[name+'.bias']
+        binary_weight=self.binaries[name+'.weight']
+        binary_bias=self.binaries[name+'.bias']
 
         if invert:
             binary_weight=(~(binary_weight.bool())).int()
@@ -384,9 +372,8 @@ class AbstractMaskedModel(ABC):
 
         normalized_shape=self.leaf_modules[name].normalized_shape
 
-        binaries=self.transform_logit_tensors()
-        binary_weight=binaries[name+'.weight']
-        binary_bias=binaries[name+'.bias']
+        binary_weight=self.binaries[name+'.weight']
+        binary_bias=self.binaries[name+'.bias']
 
         if invert:
             binary_weight=(~(binary_weight.bool())).int()
@@ -399,7 +386,7 @@ class AbstractMaskedModel(ABC):
 
         return F.layer_norm(x,normalized_shape=normalized_shape,weight=masked_weight,bias=masked_bias)
 
-    def transform_logit_tensors(self):
+    def transform_logit_tensors(self,return_binaries=False):
 
         tau=self.tau
 
@@ -421,7 +408,10 @@ class AbstractMaskedModel(ABC):
         for k,v in binaries_stop.items():
             binaries[k]=v+samples[k]
 
-        return binaries
+        if not return_binaries:
+            self.binaries=binaries
+        else:
+            return binaries
 
     def save(self):
 
@@ -549,7 +539,7 @@ class MaskedSCLModel(AbstractMaskedModel):
         x=self.MaskedConv2d(x,name='vision.net.6',bias=True,invert=invert_mask)
         x=self.MaskedBatchNorm2d(x,name='vision.net.7',invert=invert_mask)
 
-        x_conv_out=self.MaskedConv2d(x,name='vision.net.8',invert=invert_mask)
+        x_conv_out=self.MaskedConv2d(x,name='vision.net.8',bias=True,invert=invert_mask)
 
         x1=self.flatten_layer_vision(x_conv_out)
         x1=self.MaskedLinear(x1,name='vision.net.10',invert=invert_mask)
