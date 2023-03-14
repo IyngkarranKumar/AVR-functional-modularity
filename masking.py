@@ -460,6 +460,7 @@ class MaskedMNISTFFN(AbstractMaskedModel):
         self.layer0=nn.Flatten(start_dim=1,end_dim=-1)
 
     def forward(self, x, invert_mask=False):
+        self.transform_logit_tensors()
         
         
         x0=self.layer0(x)
@@ -483,6 +484,7 @@ class MaskedMNISTConv(AbstractMaskedModel):
         self.conv2_drop=nn.Dropout()
 
     def forward(self,x,invert_mask=False):
+        self.transform_logit_tensors()
 
         N=x.size()[0]
         
@@ -603,6 +605,7 @@ class MaskedSCLModel(AbstractMaskedModel):
 
 
     def forward(self, x, invert_mask=False):
+        self.transform_logit_tensors() #update binaries
 
         x=self.preprocess(x)
         b,m,n,c,h,w=x.shape
