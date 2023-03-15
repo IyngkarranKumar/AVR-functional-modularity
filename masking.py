@@ -29,8 +29,6 @@ from timeit import default_timer as timer
 importlib.reload(data)
 importlib.reload(utils)
 
-pl.seed_everything(42)
-
 debug=False
 
 def get_children(model: torch.nn.Module):
@@ -184,6 +182,10 @@ class AbstractMaskedModel(ABC):
                         self.eval(self.test_dataloader1,self.test_dataloader2,n_batches=n_eval_batches)
                         end_eval_time=timer()
 
+                    #sparsities
+                    sparsity=utils.sparsity(self.binaries.values())
+                    self.log_dict['Sparsity']=sparsity
+
 
                     #logging
                     if self.logging:
@@ -206,7 +208,7 @@ class AbstractMaskedModel(ABC):
                     self.save()
 
                     
-                print(f'Epoch: {epoch}, Loss:{loss.item()}')
+                print(f'Epoch: {epoch}, Loss:{train_loss}')
                 self.train_epoch+=1
                 
             

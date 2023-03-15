@@ -119,6 +119,12 @@ def transform_logit_tensors(logit_dict,tau=1):
     return binaries
 
 
+def random_binary_tensor(size):
+    t=torch.rand(size)
+    t[t<0.5]=0.0
+    t[t>=0.5]=1.0
+    return t
+
 
 def generate_random_mask(sizes):
 
@@ -144,15 +150,18 @@ def generate_multiple_masks(n_masks=10):
 
     return masks
         
+def generate_model_masks(model_logit_mask,n_masks=5):
 
+    masks={}
+    for _ in range(n_masks):
+        masks[f'Mask {_}']={k:random_binary_tensor(v.size()) for k,v in model_logit_mask.items()}
 
     return masks
-
 
 def sparsity(mask):
     
     numel=sum([torch.numel(tens) for tens in mask])
-    num_ones=sum([torch.bincount(torch.flatten(tens))[0] for tens in mask])
+    num_ones=sum([torch.bincount(torch.flatten(tens.to(torch.int32)))[0] for tens in mask])
 
     return (num_ones/numel).item()
 
