@@ -150,20 +150,27 @@ def generate_multiple_masks(n_masks=10):
 
     return masks
         
-def generate_model_masks(model_logit_mask,n_masks=5):
+def generate_model_masks(input,n_masks=5):
 
+    if isinstance(input,dict):
+        logit_mask=input
+    else:
+        logit_mask=input.logit_tensors_dict
     masks={}
     for _ in range(n_masks):
-        masks[f'Mask {_}']={k:random_binary_tensor(v.size()) for k,v in model_logit_mask.items()}
+        masks[f'Mask {_}']={k:random_binary_tensor(v.size()) for k,v in logit_mask.items()}
 
     return masks
+
+def mask_numel(mask):
+    return sum([torch.numel(tens) for tens in mask.values()])
 
 def sparsity(mask):
     
     numel=sum([torch.numel(tens) for tens in mask])
     num_ones=sum([torch.bincount(torch.flatten(tens.to(torch.int32)))[0] for tens in mask])
 
-    return (num_ones/numel).item()
+    return ((num_ones/numel).item())*100
 
 def get_metrics(mask):
 
