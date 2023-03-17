@@ -67,7 +67,7 @@ def get_named_children(model):
 
 class AbstractMaskedModel(ABC):
 
-    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,device,savedir=None,tau=1):
+    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,device,savedir=None):
         
         self.model=model
         self.train_dataloader=train_dataloader
@@ -86,15 +86,15 @@ class AbstractMaskedModel(ABC):
         self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,0.9,device=self.device)) for k,p in model.named_parameters()}
         self.binaries=None
         self.alpha=None
+        self.lr=None
         self.logging=False #this attribute and below are set during training/loading
         self.logger=None
         self.log_dict=None
         self.run_id=None
-        self.optimiser=torch.optim.Adam(self.logit_tensors_dict.values())
+        self.optimiser=None
 
         self.global_step=0
         self.train_epoch=0
-        self.tau=tau
 
     @abstractmethod
     def forward(self,x,invert_mask=False):
@@ -108,7 +108,7 @@ class AbstractMaskedModel(ABC):
 
         return crossent_loss,reg_loss,loss,acc
 
-    def train(self,alpha,n_epochs=5,n_batches=5,batch_split=4,
+    def train(self,alpha,tau=1,n_epochs=5,lr=1e-3,n_batches=5,batch_split=4,
                     val_every_n_steps=10,n_val_batches=100,
                     eval_every_n_steps=10,n_eval_batches=5,
                     logging=False,set_log_name=False,save_freq=10):
@@ -116,7 +116,9 @@ class AbstractMaskedModel(ABC):
 
             #set class attributes for use in rest of class
             self.alpha=alpha
-            self.tau=1
+            self.tau=tau
+            self.lr=lr
+            self.optimiser=torch.optim.Adam(self.logit_tensors_dict.values(),lr=self.lr)
             
             if logging:
                 self.logging=True
@@ -390,15 +392,13 @@ class AbstractMaskedModel(ABC):
 
     def transform_logit_tensors(self,return_binaries=False):
 
-        tau=self.tau
-
         U1 = torch.rand(1, requires_grad=True).to(self.device)
         U2 = torch.rand(1, requires_grad=True).to(self.device)
 
 
         samples={}
         for k,v in self.logit_tensors_dict.items():
-            samples[k]=torch.sigmoid((v - torch.log(torch.log(U1) / torch.log(U2))) / tau)
+            samples[k]=torch.sigmoid((v - torch.log(torch.log(U1) / torch.log(U2))) / self.tau)
             
 
         binaries_stop={}

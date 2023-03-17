@@ -1,3 +1,4 @@
+#%%
 import torch
 import numpy as np
 import torchvision
@@ -6,11 +7,10 @@ import seaborn as sns
 import copy
 import utils
 import importlib
+import torch.nn.functional as F
+import matplotlib as mpl
 
 importlib.reload(utils)
-
-
-paths=[]
 
 
 
@@ -168,27 +168,69 @@ def sharing_matrix(model_task_masks):
 
 
 
-
-
-
-def sparsity(logit_mask):
+def sparsity(binary_mask):
     
-    modal_binary_mask = (get_modal_mask(logit_mask)).values()
-    modal_binary_mask=[b.to(torch.float32) for b in modal_binary_mask]
+    return utils.sparsity(binary_mask.values())
 
-    return utils.sparsity(modal_binary_mask)
+def localisation(binary_mask):
 
-def localisation():
-    pass
+    def normed_var(mask_tens):
+        d=len(mask_tens.size())
+        mask_idxs=mask_tens.nonzero().to(torch.float32)
+        n=len(mask_idxs)
+        if n==0:
+            return 0
+        mu=torch.mean(mask_idxs,dim=0)
+
+        normed_var=(1/n*d)*sum([(F.mse_loss(idx,mu).item())/(torch.dot(mu,mu).item()+1e-12) for idx in mask_idxs])
+        return normed_var
+    
+    normed_vars=[normed_var(mask_tens) for mask_tens in binary_mask.values()]
+
+    return sum(normed_vars)
 
 
-sizes=[(4,4),(3,1),(2,2),(15,2),(3,1)]
-model_logit_dict={f'layer {idx}':utils.random_binary_tensor(size=sizes[idx]) for idx in range(len(sizes))}
-model_task_masks=utils.generate_model_masks(model_logit_dict)
-sharing_matrix(model_task_masks)
+def plot_metrics(model_task_masks_iter,plot_type='model',dummy_data=False):
+
+    if plot_type!='model' or plot_type!='task':
+        raise Exception(f'Please enter valid arguments for plot_type. Entered values were plot_type:{plot_type}')
+
+    sparsity_metric=[]
+    localisation_metric=[]
+    model_names=[]
+    task_names=[]
+
+    if not dummy_data:
+        for model_name,model_task_masks in model_task_masks_iter.items():
+            for task_name,task_mask in model_task_masks.items():
+                sparsity_metric.append(sparsity(task_mask))
+                localisation_metric.append(localisation(task_mask))
+                model_names.append(model_name)
+                task_names.append(task_name)
+
+    if plot_type=='model':
+        mapping={name:i for i,name in enumerate(set(model_names))}
+        c=[mapping[model_name] for model_name in model_names]
+    elif plot_type=='task':
+        mapping={name:i for i,name in enumerate(set(task_names))}
+        c=[mapping[task_name] for task_name in task_names]
+
+    plt.scatter(sparsity_metric,localisation_metric,c=c,s=200,alpha=0.75,marker='x')
 
 
-if 1: #model and maskedmodel setup
+
+
+if 0:
+    sizes=[(4,4),(3,1),(2,2),(15,2),(3,1)]
+    model_logit_dict={f'layer {idx}':utils.random_binary_tensor(size=sizes[idx]) for idx in range(len(sizes))}
+    model_task_masks=utils.generate_model_masks(model_logit_dict)
+    true_weights,_,_=find_true_weights(model_task_masks)
+    mask0=true_weights['Mask 0']
+    sparsity0=sparsity(mask0)
+    sharing_matrix(model_task_masks)
+
+
+if 1: #scl model and maskedmodel setup
 
     import masking,data,utils
     from data import IRAVENDataModule
@@ -255,120 +297,77 @@ if 1: #model and maskedmodel setup
         masked_scl=masking.MaskedSCLModel(init_kwargs)
 
 
-
-
-#dev sharing matrix
-
-
-if 0: 
-    scl_task_masks=utils.generate_model_masks(masked_scl)
-
-
-    #toy example
-    sizes=[(4,4),(4,1),(5,3),(3,1)]
+if 0:
+    sizes=[(4,4),(3,1),(2,2),(15,2),(3,1)]
     model_logit_dict={f'layer {idx}':utils.random_binary_tensor(size=sizes[idx]) for idx in range(len(sizes))}
     model_task_masks=utils.generate_model_masks(model_logit_dict)
+    mask0=model_task_masks['Mask 0']
+
+    mask_tens=list(mask0.values())[0].int()
+    d=len(mask_tens.size())
+    mask_idxs=mask_tens.nonzero().to(torch.float32)
+    n=len(mask_idxs)
+    mu=torch.mean(mask_idxs,dim=0)
+
+    normed_var=(1/n*d)*sum([(F.mse_loss(idx,mu).item())/torch.dot(mu,mu).item() for idx in mask_idxs])
+
+#%%
+
+modelmodel_logit_dict={f'layer {idx}':utils.random_binary_tensor(size=sizes[idx]) for idx in range(len(sizes))}
+test_task_masks=utils.generate_model_masks(model_logit_dict)
+scl_task_masks=utils.generate_model_masks(masked_scl)
+model_task_masks_iter={'test model':model_task_masks,
+                        'scl': scl_task_masks}
 
 
-    names=list(next(iter(model_task_masks.items()))[-1].keys())
-    shared_weights={}
-
-    for idx,tens_name in enumerate(names):
-        
-        tensor_list=[mask[tens_name].to(torch.int32) for mask in model_task_masks.values()] #get binary tensors for this name
-
-        #find shared
-        tens_shared=(torch.ones(size=tensor_list[0].size(),dtype=torch.int32))
-        for t in tensor_list:
-            tens_shared=torch.logical_and(tens_shared,t)
-        tens_shared=tens_shared.int()
-
-        #print([torch.bincount(torch.flatten(tens.to(torch.int32)))[-1] for tens in tensor_list]) #number of ones for each tensor in tens_list
-        #print(torch.bincount(torch.flatten(tens_shared.to(torch.int32)))[-1]) #number of ones in tens_shared
-
-        shared_weights[tens_name]=tens_shared.int()
+sparsity_metric=[]
+localisation_metric=[]
+model_names=[]
+task_names=[]
 
 
-    num_ones_masks=[mask_num_ones(mask) for mask in model_task_masks.values()]
-    num_ones_shared=mask_num_ones(shared_weights)
-    max_shared_perc=(num_ones_shared/min(num_ones_masks))*100
+
+#calculate metrics
+if 1:
+
+    for model_name,model_task_masks in model_task_masks_iter.items():
+        for task_name,task_mask in model_task_masks.items():
+            print(model_name,task_name)
+            sparsity_metric.append(sparsity(task_mask))
+            localisation_metric.append(localisation(task_mask))
+            model_names.append(model_name)
+            task_names.append(task_name)
+
+#%%
+plot_type='model'
+if plot_type=='model':
+    mapping={name:i for i,name in enumerate(set(model_names))}
+    c=[mapping[model_name] for model_name in model_names]
+elif plot_type=='task':
+    mapping={name:i for i,name in enumerate(set(task_names))}
+    c=[mapping[task_name] for task_name in task_names]
 
 
-    true_weights={}
+plt.style.use('ggplot')
+labelsize=20
+titlesize=20
+ticksize=14
+cmap=plt.cm.jet
+cmaplist=[cmap(i) for i in range(cmap.N)]
+cmap=mpl.colors.LinearSegmentedColormap.from_list(
+    'Custom cmap', cmaplist, cmap.N)
+cb=plt.colorbar.ColorBase(ax,cmap=cmap)
 
-    #a toy example really is worth the time!
-    for mask_name,mask in model_task_masks.items():
-        masks_iter=list(zip(mask.values(),shared_weights.values()))
-        name_masks_iter = list(zip(names,masks_iter))
-        true_weights[mask_name]={k:(v0-v_shared).to(torch.int32) for k,(v0,v_shared) in name_masks_iter}
+fontdict1={'size':labelsize}
+fontdict2={'size':ticksize}
 
+fig,ax=plt.subplots()
+ax.scatter(sparsity_metric,localisation_metric,c=c,s=200,alpha=0.75,marker='x')
+ax.set_xlabel('Sparsity',fontdict=fontdict1)
+ax.set_ylabel('Localisation',fontdict=fontdict1)
+ax.set_xticklabels(labels=ax.get_xticklabels(),fontdict=fontdict2)
+ax.set_yticklabels(labels=ax.get_yticklabels(),fontdict=fontdict2)
+ax.set_title('Sparsity vs Localisation',fontsize=titlesize)
+ax.legend()
+fig.tight_layout()
 
-    #find true shared weights
-    #loop over masks
-    true_shared_weights={}
-    for idxa,maska_name in enumerate(true_weights):
-        for idxb,maskb_name in enumerate(true_weights):
-            if idxb<idxa:
-                continue
-            maska=true_weights[maska_name]
-            maskb=true_weights[maskb_name]
-            ab_shared_weights={}
-
-            #loop over layers in mask
-            layer_names=list(maska.keys())
-            for name in layer_names:
-                tens_a,tens_b=maska[name],maskb[name]
-                tens_shared=(torch.ones(size=(tens_a.size()),dtype=torch.int32))
-                for tens in [tens_a,tens_b]:
-                    tens_shared=torch.logical_and(tens_shared,tens)
-                tens_shared=tens_shared.int()
-
-                ab_shared_weights[name]=tens_shared
-            
-            true_shared_weights[f'{maska_name},{maskb_name}']=ab_shared_weights
-
-            
-    true_shared_names=true_shared_weights.keys()
-
-    max_true_sharing_percentage={}
-    for name in true_shared_names:
-        maska,maskb=name.split(',')
-        norm_const=min([mask_num_ones(true_weights[maska]),mask_num_ones(true_weights[maskb])])
-        max_shared_perc_ab = round(((mask_num_ones(true_shared_weights[name]))/norm_const)*100,2)
-        max_true_sharing_percentage[name]=max_shared_perc_ab
-
-    n_masks=len(model_task_masks)
-    data_arr=np.zeros(shape=(n_masks,n_masks))
-
-    count=0
-    for i in range(n_masks):
-        n_get=n_masks-i
-        subarr=list(max_true_sharing_percentage.values())[count:n_get+count]
-        data_arr[i,i:]=subarr
-        count+=n_get
-
-    data_arr_low_tril=np.transpose(copy.deepcopy(data_arr))
-    np.fill_diagonal(data_arr_low_tril,0)
-
-    plot_matrix=data_arr+data_arr_low_tril
-
-    fig,ax=plt.subplots()
-    fig.suptitle('Model maximum shared weight percentages')
-    x_labels=y_labels=list(model_task_masks.keys())
-    fmt='.1f' #use to get rid of standard form
-    cmap='viridis_r'
-
-    plot_kwargs={
-        'data':plot_matrix,
-        'vmax':100,
-        'vmin':0,
-        'annot':True,
-        'ax':ax,
-        'xticklabels':x_labels,
-        'yticklabels':y_labels,
-        'fmt':fmt,
-        'cmap':cmap
-    }
-
-
-    sns.heatmap(**plot_kwargs)
