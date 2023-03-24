@@ -10,6 +10,7 @@ import random
 import io
 import pickle
 
+
 #%% 
 
 def view_matrices(source_dir,type="train",n_view=1):
@@ -26,15 +27,17 @@ def view_matrices(source_dir,type="train",n_view=1):
             basename = os.path.split(os.path.basename(img_file))[-1]
             name = subdir+"/"+basename
 
-
-            fig,axs = plt.subplots(4,6,figsize = (10,10))
+            gridspec_kw={'hspace':0}
+            fig,axs = plt.subplots(4,6,figsize = (6,4))
             matrix_axs = [(0,0),(0,1),(0,2),
                             (1,0),(1,1),(1,2),
                             (2,0),(2,1),(2,2),
                             (0,4),(0,5),
                             (1,4),(1,5),
                             (2,4),(2,5),
-                            (3,4),(3,5)] 
+                            (3,4),(3,5)]
+            fig.subplots_adjust(top=0.9,bottom=0.1,hspace=0,wspace=0.1)
+            
 
             #prepare axes
             for i in range(len(axs)):
@@ -58,10 +61,12 @@ def view_matrices(source_dir,type="train",n_view=1):
                 elif img_idx > 8:
                     img = images[img_idx-1]
 
-                ax.imshow(img)
+                ax.imshow(img,cmap='gray')
 
-            fig.suptitle(name,fontsize=15)
-            fig.tight_layout()
+            #fig.tight_layout()
+
+            #fig.suptitle(name,fontsize=15)
+            
 
 def imshow(tens):
     arr=tens.permute(1,2,0).numpy()

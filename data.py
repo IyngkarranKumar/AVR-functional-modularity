@@ -190,7 +190,7 @@ class MNISTCustomDataset(Dataset):
         if type(self.n)==list:
             return img_arr,(self.labels[idx]).squeeze()
         
-class CustomDataModule(pl.LightningDataModule):
+class MNISTCustomDataModule(pl.LightningDataModule):
 
     def __init__(self,n=0,dataset_frac=1.0,batch_size=64):
         super().__init__()
