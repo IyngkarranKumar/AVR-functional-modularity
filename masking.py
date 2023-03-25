@@ -392,12 +392,11 @@ class AbstractMaskedModel(ABC):
 
     def transform_logit_tensors(self,return_binaries=False):
 
-        U1 = torch.rand(1, requires_grad=True).to(self.device)
-        U2 = torch.rand(1, requires_grad=True).to(self.device)
-
 
         samples={}
         for k,v in self.logit_tensors_dict.items():
+            U1=torch.rand_like(v,requires_grad=True).to(self.device)
+            U2=torch.rand_like(v,requires_grad=True).to(self.device)
             samples[k]=torch.sigmoid((v - torch.log(torch.log(U1) / torch.log(U2))) / self.tau)
             
 
