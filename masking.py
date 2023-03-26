@@ -140,7 +140,7 @@ class AbstractMaskedModel(ABC):
             for epoch in range(self.train_epoch,n_epochs):
                 start_time=timer()
                 for batch_idx,batch in enumerate(self.train_dataloader):
-                    print(f'Starting train batch {batch_idx}')
+                    #print(f'Starting train batch {batch_idx}')
                     if n_batches=='full':
                         pass
                     if batch_idx==n_batches:
@@ -186,7 +186,8 @@ class AbstractMaskedModel(ABC):
 
                     #sparsities
                     sparsity=utils.sparsity(self.binaries.values())
-                    self.log_dict['Sparsity']=sparsity
+                    if self.logging:
+                        self.log_dict['Sparsity']=sparsity
 
 
                     #logging
@@ -226,7 +227,7 @@ class AbstractMaskedModel(ABC):
         val_accs2=[]
 
         for batch_idx,(batch_task,batch_not_task) in enumerate(zip(self.test_dataloader1,self.test_dataloader2)):
-            print(f'Starting validation batch {batch_idx}')
+            #print(f'Starting validation batch {batch_idx}')
             if n_batches=='full':
                 pass
             if batch_idx==n_batches:
