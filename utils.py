@@ -109,11 +109,11 @@ def get_named_children(model):
 def transform_logit_tensors(logit_dict,tau=1):
 
     with torch.no_grad():
-        U1 = torch.rand(1, requires_grad=True)
-        U2 = torch.rand(1, requires_grad=True)
 
         samples={}
         for k,v in logit_dict.items():
+            U1=torch.rand_like(v,requires_grad=True)
+            U2=torch.rand_like(v,requires_grad=True)
             samples[k]=torch.sigmoid((v - torch.log(torch.log(U1) / torch.log(U2))) / tau)
             
 
@@ -136,14 +136,21 @@ def random_binary_tensor(size):
     return t
 
 
-def generate_random_mask(sizes):
+def generate_random_mask(sizes,type='binary',fill_value=0.9):
 
-    weight_mask=[]
-    for sz in sizes:
-        t=torch.rand(sz)
-        t[t<0.5]=0
-        t[t>=0.5]=1
-        weight_mask.append(t.int())
+    weight_mask={}
+
+    for i,sz in enumerate(sizes):
+        if type=='binary':
+            t=torch.rand(sz)
+            t[t<0.5]=0
+            t[t>=0.5]=1
+            t=t.int()
+        elif type=='logit':
+            t=torch.full(size=sz,fill_value=fill_value)
+        else:
+            raise Exception("Invalid mask type entered.")
+        weight_mask[f'layer {i}']=t
 
     return weight_mask
 
