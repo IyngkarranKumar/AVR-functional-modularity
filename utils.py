@@ -78,11 +78,16 @@ def calculate_accuracy(pred_logits,targets):
     acc=(len(torch.nonzero(pred==targets))/len(pred))*100
     return acc
 
-def sparsity(binary_mask_iter):
+def sparsity(mask,logits=False):
+    if logits:
+        binary_mask=transform_logit_tensors(mask)
+        binary_mask_iter=binary_mask.values()
+    else:
+        binary_mask_iter=mask.values()
     total=sum(torch.numel(b) for b in binary_mask_iter)
     ones=sum(torch.count_nonzero(b) for b in binary_mask_iter)
     sparsity=(total-ones)/total
-    return sparsity.item()
+    return sparsity.item()*100
 
 
 def get_named_children(model):
@@ -170,7 +175,7 @@ def generate_model_masks(input,n_masks=5):
 def mask_numel(mask):
     return sum([torch.numel(tens) for tens in mask.values()])
 
-def sparsity(mask):
+def sparsity_2(mask):
     
     numel=sum([torch.numel(tens) for tens in mask])
     num_ones=sum([torch.bincount(torch.flatten(tens.to(torch.int32)))[0] for tens in mask])

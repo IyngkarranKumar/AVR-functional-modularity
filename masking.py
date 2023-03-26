@@ -186,7 +186,7 @@ class AbstractMaskedModel(ABC):
                         end_eval_time=timer()
 
                     #sparsities
-                    sparsity=utils.sparsity(self.binaries.values())
+                    sparsity=utils.sparsity(self.binaries)
                     if self.logging:
                         self.log_dict['Sparsity']=sparsity
 
