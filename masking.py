@@ -67,7 +67,7 @@ def get_named_children(model):
 
 class AbstractMaskedModel(ABC):
 
-    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,device,savedir=None):
+    def __init__(self,model,train_dataloader,test_dataloader1,test_dataloader2,device,savedir=None,logit_init=0.9):
         
         self.model=model
         self.train_dataloader=train_dataloader
@@ -83,7 +83,7 @@ class AbstractMaskedModel(ABC):
         self.savedir=savedir
 
 
-        self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,0.9,device=self.device)) for k,p in model.named_parameters()}
+        self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,logit_init,device=self.device)) for k,p in model.named_parameters()}
         self.binaries=None
         self.alpha=None
         self.lr=None
