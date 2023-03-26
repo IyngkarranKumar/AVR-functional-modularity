@@ -148,6 +148,7 @@ class AbstractMaskedModel(ABC):
 
 
                     train_loss=train_crossent_loss=train_reg_loss=0
+                    self.optimiser.zero_grad()
 
                     x,y,*rest=batch
                     x,y=x.to(self.device),y.to(self.device)
