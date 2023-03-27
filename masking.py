@@ -189,7 +189,6 @@ class AbstractMaskedModel(ABC):
                     sparsity=utils.sparsity(self.binaries)
                     if self.logging:
                         self.log_dict['Sparsity']=sparsity
-                    print(f'Sparsity: {sparsity}')
 
 
                     #logging
