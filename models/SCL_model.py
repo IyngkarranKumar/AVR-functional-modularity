@@ -13,6 +13,17 @@ def expand_dim(t, dim, k):
     expand_shape[dim] = k
     return t.expand(*expand_shape)
 
+def SCL_preprocess(x):
+
+    x=x.unsqueeze(2)
+    questions,answers=x[:,0:8,:,:,],x[:,8:,:,:,]
+    answers = answers.unsqueeze(2)
+    questions = expand_dim(questions, dim=1, k=8)
+    permutations = torch.cat((questions, answers), dim=2)
+
+    return permutations
+
+
 # simple MLP with ReLU activation
 
 class MLP(nn.Module):
