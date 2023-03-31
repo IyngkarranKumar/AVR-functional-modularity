@@ -6,5 +6,6 @@ datasets
 runs
 wandb
 model_ckpts
+mask_ckpts
 logs
 masks
