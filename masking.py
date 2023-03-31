@@ -84,14 +84,16 @@ class AbstractMaskedModel(ABC):
 
 
         self.logit_tensors_dict={k:torch.nn.Parameter(data=torch.full_like(p,logit_init,device=self.device)) for k,p in model.named_parameters()}
-        self.binaries=None
         self.alpha=None
+        self.tau=None
         self.lr=None
         self.logging=False #this attribute and below are set during training/loading
         self.logger=None
         self.log_dict=None
         self.run_id=None
         self.optimiser=None
+
+        self.binaries=None; self.transform_logit_tensors() #initiaise binaries
 
         self.global_step=0
         self.train_epoch=0
@@ -399,7 +401,7 @@ class AbstractMaskedModel(ABC):
         for k,v in self.logit_tensors_dict.items():
             U1=torch.rand_like(v,requires_grad=True).to(self.device)
             U2=torch.rand_like(v,requires_grad=True).to(self.device)
-            samples[k]=torch.sigmoid((v - torch.log(torch.log(U1) / torch.log(U2))) / self.tau)
+            samples[k]=torch.sigmoid((v - torch.log(torch.log(U1) / torch.log(U2))) / (self.tau if self.tau is not None else 1))
             
 
         binaries_stop={}
@@ -436,7 +438,7 @@ class AbstractMaskedModel(ABC):
         fname=os.path.join(self.savedir,f'checkpoint_step={self.global_step}_epoch={self.train_epoch}')
         with open(fname,'wb') as f:
             pickle.dump(save_dict,f)
-            print(f'Checkpoint step={self.global_step}, epoch={self.train_epoch} saved')
+            print(f'step={self.global_step}, epoch={self.train_epoch} saved')
  
     def load(self,path):
 
@@ -627,3 +629,31 @@ class MaskedSCLModel(AbstractMaskedModel):
     
 
         return logits
+
+class MaskedCNN_MLP(AbstractMaskedModel):
+
+    def __init__(self,kwargs):
+        super().__init__(**kwargs)
+
+    def MaskedConvModule(self,x,invert_mask=False):
+
+        x=self.MaskedConv2d(x,name='conv.conv1',invert=invert_mask)
+        x=F.relu(self.MaskedBatchNorm2d(x,name='conv.batch_norm1',invert=invert_mask))
+        x=self.MaskedConv2d(x,name='conv.conv2',invert=invert_mask)
+        x=F.relu(self.MaskedBatchNorm2d(x,name='conv.batch_norm2',invert=invert_mask))
+        x=self.MaskedConv2d(x,name='conv.conv3',invert=invert_mask)
+        x=F.relu(self.MaskedBatchNorm2d(x,name='conv.batch_norm3',invert=invert_mask))
+        x=self.MaskedConv2d(x,name='conv.conv4',invert=invert_mask)
+        x=F.relu(self.MaskedBatchNorm2d(x,name='conv.batch_norm4',invert=invert_mask))
+        
+        x_conv=x.view(x.size()[0],-1)
+
+        return x_conv
+
+    def forward(self,x,invert_mask=False):
+
+        x=self.MaskedConvModule(x,invert_mask=invert_mask)
+        x=F.relu(self.MaskedLinear(x,name='l1'))
+        x=F.relu(self.MaskedLinear(x,name='l2'))
+
+        return x
