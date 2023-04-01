@@ -97,6 +97,8 @@ class AbstractMaskedModel(ABC):
 
         self.global_step=0
         self.train_epoch=0
+        self.early_stopping=None
+        self.ES_accuracies=[] #accuracies for early stopping
 
     @abstractmethod
     def forward(self,x,invert_mask=False):
@@ -113,7 +115,7 @@ class AbstractMaskedModel(ABC):
     def train(self,alpha,tau=1,n_epochs=5,lr=1e-3,n_batches=5,batch_split=4,
                     val_every_n_steps=10,n_val_batches=100,
                     eval_every_n_steps=10,n_eval_batches=5,
-                    logging=False,set_log_name=False,save_freq=10):
+                    logging=False,set_log_name=False,save_freq_epoch=10,save_freq_step=500,early_stopping=None):
 
 
             #set class attributes for use in rest of class
@@ -121,6 +123,7 @@ class AbstractMaskedModel(ABC):
             self.tau=tau
             self.lr=lr
             self.optimiser=torch.optim.Adam(self.logit_tensors_dict.values(),lr=self.lr)
+            self.early_stopping=early_stopping
             
             if logging:
                 self.logging=True
@@ -210,7 +213,10 @@ class AbstractMaskedModel(ABC):
 
                 
                 #save every n_save epochs
-                if (self.savedir is not None) and (epoch%save_freq==0) and (epoch!=0):
+                if (self.savedir is not None) and (epoch%save_freq_epoch==0) and (epoch!=0):
+                    self.save()
+
+                if (self.savedir is not None) and (self.global_step%save_freq_step==0) and (self.global_step!=0):
                     self.save()
 
                     
@@ -273,6 +279,8 @@ class AbstractMaskedModel(ABC):
                             'Loss/validation_reg_not_task':val_reg_loss2,
                             'Accuracy/validation_not_task':val_accuracy2
                             })
+
+
 
 
         

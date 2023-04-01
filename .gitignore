@@ -9,3 +9,5 @@ model_ckpts
 mask_ckpts
 logs
 masks
+masking
+test.ipynb
