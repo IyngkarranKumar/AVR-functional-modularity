@@ -115,7 +115,7 @@ class AbstractMaskedModel(ABC):
     def train(self,alpha,tau=1,n_epochs=5,lr=1e-3,n_batches=5,batch_split=4,
                     val_every_n_steps=10,n_val_batches=100,
                     eval_every_n_steps=10,n_eval_batches=5,
-                    logging=False,set_log_name=False,save_freq_epoch=10,save_freq_step=500,early_stopping=None):
+                    logging=False,set_log_name=False,save_freq_epoch=10,save_freq_step=500,early_stopping=None,sweep=False,sweep_id=None):
 
 
             #set class attributes for use in rest of class
@@ -138,7 +138,11 @@ class AbstractMaskedModel(ABC):
                 if self.run_id is not None:
                     self.logger=wandb.init(id=self.run_id,project='AVR',resume='must')
                 else:
-                    self.logger=wandb.init(project='AVR',name=log_name)
+                    if sweep:
+                        self.logger=wandb.init(project='AVR',id=sweep_id)
+                    if not sweep:
+                        self.logger=wandb.init(project='AVR',name=log_name)
+                    
 
                 self.log_dict={}
 
