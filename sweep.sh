@@ -6,5 +6,5 @@
 
 for name in "squares" "light"
 do 
-    python sweep.py $name
+    python sweep.py --dataset-name=$name --test
 done
