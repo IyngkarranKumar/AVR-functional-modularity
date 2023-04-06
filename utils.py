@@ -89,6 +89,17 @@ def sparsity(mask,logits=False):
     sparsity=(total-ones)/total
     return sparsity.item()*100
 
+def mask_num_ones(binaries):
+
+    if type(binaries)==dict:
+        binary_mask_iter=binaries.values()
+        ones=sum(torch.count_nonzero(b) for b in binary_mask_iter)
+    if type(binaries)==torch.Tensor:
+        ones=torch.count_nonzero(binaries)
+
+
+    return ones.item()
+
 
 def get_named_children(model):
 

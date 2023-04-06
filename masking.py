@@ -220,6 +220,11 @@ class AbstractMaskedModel(ABC):
                 if (self.savedir is not None) and (epoch%save_freq_epoch==0) and (epoch!=0):
                     self.save()
 
+                #save on last epoch
+                if (self.savedir is not None) and (epoch==n_epochs-1):
+                    self.save()
+
+
                 if (self.savedir is not None) and (self.global_step%save_freq_step==0) and (self.global_step!=0):
                     self.save()
 
