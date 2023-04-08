@@ -33,17 +33,26 @@ def sparsity(mask,logits=False):
 
 def localisation(mask,logits=False):
 
-    '''
-    NOT YET IMPLEMENTED
-    '''
-
     if logits:
         binary_mask=utils.transform_logit_tensors(mask)
         binary_mask_iter=binary_mask.values()
     else:
         binary_mask_iter=mask.values()
 
-    return random.randint(0,100)
+    def normed_var(mask_tens):
+        d=len(mask_tens.size())
+        mask_idxs=mask_tens.nonzero().to(torch.float32)
+        n=len(mask_idxs)
+        if n==0:
+            return 0
+        mu=torch.mean(mask_idxs,dim=0)
+
+        normed_var=(1/n*d)*sum([(F.mse_loss(idx,mu).item())/(torch.dot(mu,mu).item()+1e-12) for idx in mask_idxs])
+        return normed_var
+    
+    normed_vars=[normed_var(mask_tens) for mask_tens in binary_mask_iter]
+
+    return sum(normed_vars)
 
 
 def mask_num_ones(mask):
@@ -324,7 +333,7 @@ class MaskAnalysis:
         fig,ax=plt.subplots()
         fig.suptitle(f'Model accuracy: {acc}%',fontsize=20)
         _l=list(acc_mask_binaries_dict.keys())
-        x_labels=y_labels=[s.split('_')[-1] for s in l]
+        x_labels=y_labels=[s.split('_')[-1] for s in _l]
 
         #beautification
         fmt='.1f' #use to get rid of standard form
