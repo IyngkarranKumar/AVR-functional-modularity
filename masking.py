@@ -115,7 +115,7 @@ class AbstractMaskedModel(ABC):
     def train(self,alpha,tau=1,n_epochs=5,lr=1e-3,n_batches=5,batch_split=4,
                     val_every_n_steps=10,n_val_batches=100,
                     eval_every_n_steps=10,n_eval_batches=5,
-                    logging=False,set_log_name=False,save_freq_epoch=10,save_freq_step=500,early_stopping=None,sweep=False,sweep_logger=None):
+                    logging=False,set_log_name=False,save_freq_epoch=1e10,save_freq_step=1e10,early_stopping=None,sweep=False,sweep_logger=None):
 
 
             #set class attributes for use in rest of class
@@ -141,6 +141,7 @@ class AbstractMaskedModel(ABC):
                     if sweep:
                         self.logger=sweep_logger
                     if not sweep:
+                        log_name=str(input('Enter log name'))
                         self.logger=wandb.init(project='AVR',name=log_name)
                     
 
@@ -288,11 +289,6 @@ class AbstractMaskedModel(ABC):
                             'Loss/validation_reg_not_task':val_reg_loss2,
                             'Accuracy/validation_not_task':val_accuracy2
                             })
-
-
-
-
-        
 
     def eval(self,task_eval_dataloader,_task_eval_dataloader,n_batches):
         '''
@@ -464,10 +460,8 @@ class AbstractMaskedModel(ABC):
         with open (path,'rb') as f:
             load_dict=pickle.load(f)
 
-        self.alpha=load_dict.get('alpha')
-        self.tau=load_dict.get('tau')
         self.global_step=load_dict.get('global_step')
-        self.train_epoch=load_dict.get('train_epoch')
+        self.train_epoch=load_dict.get('train_epoch')+1
         self.logit_tensors_dict=load_dict.get('logit_tensors_dict')
         self.optimiser=load_dict.get('optimiser')
         self.run_id=load_dict.get('run_id')
