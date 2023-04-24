@@ -23,7 +23,7 @@ UNI_MAX = len(UNI_VALUES) - 1
 
 # Type
 TYPE_VALUES = ["none","triangle", "square", "pentagon", "hexagon", "circle"]
-#TYPE_VALUES = ["none", "square"]
+#TYPE_VALUES = ["none", "hexagon"]
 TYPE_MIN = 0
 TYPE_MAX = len(TYPE_VALUES) - 1
 

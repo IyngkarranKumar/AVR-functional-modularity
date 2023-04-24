@@ -6,8 +6,8 @@
 
 #SET THESE FOR DSET GENERATION
 
-parent_store_dir="originals_masking"
-n=1000
+parent_store_dir="project_demo_hexagons/"
+n=5
 
 
 
@@ -28,9 +28,9 @@ for val in $list; do
     if [ $val == "train" ]
         then let num=($n*7)/10
     elif [ $val == "test" ]
-        then let num=($n*3)/10
+        then let num=($n*2)/10
     else
-        let num=($n*0)/10
+        let num=($n*1)/10
     fi
     
     path=$parent_store_dir$val;
