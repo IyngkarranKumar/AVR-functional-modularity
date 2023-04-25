@@ -489,7 +489,6 @@ class MaskedMNISTFFN(AbstractMaskedModel):
 
         return x4
 
-
 class MaskedMNISTConv(AbstractMaskedModel):
     
     def __init__(self,kwargs):
@@ -513,7 +512,6 @@ class MaskedMNISTConv(AbstractMaskedModel):
         x=F.dropout(x)
         x=self.MaskedLinear(x,name='fc2',invert=invert_mask)
         return x
-
 
 class MaskedSCLModel(AbstractMaskedModel):
 

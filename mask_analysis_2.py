@@ -1,3 +1,5 @@
+
+#%%
 import torch
 import numpy as np
 import torchvision
@@ -19,7 +21,6 @@ importlib.reload(utils)
 
 #auxilliary functions
 
-
 def sparsity(mask,logits=False):
     if logits:
         binary_mask=utils.transform_logit_tensors(mask)
@@ -38,6 +39,7 @@ def localisation(mask,logits=False):
         binary_mask_iter=binary_mask.values()
     else:
         binary_mask_iter=mask.values()
+    n_layers=len(binary_mask_iter)
 
     def normed_var(mask_tens):
         d=len(mask_tens.size())
@@ -51,8 +53,10 @@ def localisation(mask,logits=False):
         return normed_var
     
     normed_vars=[normed_var(mask_tens) for mask_tens in binary_mask_iter]
+    
 
-    return sum(normed_vars)
+    #this metric only works for masks where n_layers is CONSTANT
+    return sum(normed_vars)/n_layers
 
 
 def mask_num_ones(mask):
@@ -62,13 +66,15 @@ def mask_num_ones(mask):
 class MaskAnalysis:
 
 
-    def __init__(self,ckpt_paths,accuracies=[60,70,80],device='cpu',preprocessing=True):
+    def __init__(self,ckpt_paths,accuracies,device='cpu',preprocessing=True):
 
         self.mask_logit_dict={}
         self.mask_binaries_dict={}
         self.device=torch.device(device)
-        self.accuracies=accuracies
         self.preprocessing_dir=[path for path in ckpt_paths if 'preprocessing' in path][0]
+        self.model_dirs=list(set(ckpt_paths)-set(self.preprocessing_dir))
+        self.accuracies=accuracies
+        self.device=device
 
 
         for i,acc_dir in enumerate(ckpt_paths):
@@ -82,7 +88,7 @@ class MaskAnalysis:
                 ckpt_file=os.path.join(task_dir,os.listdir(task_dir)[0])
 
                 with open(ckpt_file,'rb') as f:
-                    if device=='cpu':
+                    if self.device=='cpu':
                         data=CPU_Unpickler(f).load()
                     else:
                         data=pickle.load(f)
@@ -117,7 +123,11 @@ class MaskAnalysis:
 
             preprocessing_mask_path=[path for path in os.listdir(self.preprocessing_dir) if str(acc) in path][0]
             with open (os.path.join(self.preprocessing_dir,preprocessing_mask_path),'rb') as f:
-                preprocessing_logit_dict=pickle.load(f)['logit_tensors_dict']
+                if self.device=='cpu':
+                    preprocessing_logit_dict=CPU_Unpickler(f).load()['logit_tensors_dict']
+                else:
+                    preprocessing_logit_dict=pickle.load(f)['logit_tensors_dict']
+
                 preprocessing_binaries_dict=utils.transform_logit_tensors(preprocessing_logit_dict)
 
 
@@ -189,9 +199,11 @@ class MaskAnalysis:
                 mask=self.mask_binaries_dict[key_name]
                 shape_sparsities.append(sparsity(mask))
                 shape_localisations.append(localisation(mask))
+
+               
             all_sparsities.append(shape_sparsities)
             all_localisations.append(shape_localisations)
-
+        
 
 
         #plot
@@ -214,7 +226,7 @@ class MaskAnalysis:
 
         ax_s.legend(loc=(1.05,0),fontsize=20)
         ax_s.set_ylabel('Sparsity',fontsize=20)
-        ax_l.set_ylabel('Localisation',fontsize=20)
+        ax_l.set_ylabel('Dispersity',fontsize=20)
         ax_l.set_xticks(x_ticks,[str(acc) for acc in accuracies],fontsize=20)
         ax_l.set_xlabel('SCL model accuracies',fontsize=20)
         for ax in axs:
@@ -248,40 +260,67 @@ class MaskAnalysis:
                     frac_means[layer]=(frac_means[layer]*idx)/(idx+1) + (shape_frac/(idx+1)) #update running mean
 
 
-        #defo a far better 
+
         plot_layer_names={}
         plot_names=[]
         reg_exs=['vision','attr','ff_residual','rel','logit']
         reg_exs_repl=['V','A','FFR','R','L']
 
         for j in range(len(reg_exs)):
-            _names=[l for l in layer_names if reg_exs[j] in l]
-            _plot_names=[f'{reg_exs_repl[j]}{i+1}' for i in range(len(_names))]
+            _names=[l for l in self.layer_names if reg_exs[j] in l]
+            _plot_names=[f'{reg_exs_repl[j]}' for i in range(len(_names))]
             plot_names=plot_names+_plot_names
 
 
-        x_names=plot_names;x_pos=5*np.arange(len(x_names)) 
+        x_names=plot_names;x_pos=1*np.arange(len(x_names)) 
         y_vals=list(frac_means.values())
         fig,ax=plt.subplots(figsize=(10,4));ax.set_yscale('log')
 
+        #setting colour
+        n_colours=len(reg_exs)
+        name_map={
+            'V':'object network',
+            'A':'attribute network',
+            'FFR':'ff residual',
+            'R':'relationship network',
+            'L':'logit layer'
+        }
+        mapped_names=list(map(name_map.get,plot_names))
+        colour_map={
+            'object network':'tab:blue',
+            'attribute network':'tab:green',
+            'ff residual':'tab:red',
+            'relationship network':'tab:purple',
+            'logit layer':'tab:cyan'
+        }
+        colour_arr=list(map(colour_map.get,mapped_names))
 
-        ax.bar(x_pos,y_vals,width=1.0)
+        ax.bar(x_pos,y_vals,color=colour_arr,width=0.9)
+        labels=list(colour_map.keys())
+        handles = [plt.Rectangle((0,0),1,1, color=colour_map[label]) for label in labels]
+        ax.legend(handles,labels,fontsize=15,loc=(1.01,0.25))
 
 
         #beautification
-        tick_size=15
-        label_size=15
+        tick_size=20
+        label_size=20
         ax.set_yscale('log')
-        plt.xticks(x_pos,x_names,rotation=45,fontsize=8)
-        plt.yticks(fontsize=tick_size)
+        plt.yticks(ticks=np.logspace(-5,-1,5),fontsize=tick_size)
         plt.ylabel('$\log(n_i / n_{tot})$',fontsize=label_size)
-        plt.xlabel('SCL Layers',fontsize=label_size,labelpad=30)
+        ax.tick_params(
+        axis='x',          # changes apply to the x-axis
+        which='both',      # both major and minor ticks are affected
+        bottom=False,      # ticks along the bottom edge are off
+        top=False,         # ticks along the top edge are off
+        labelbottom=False)
+
         plt.title(f'Model accuracy:{acc} %',fontsize=20)
+
 
     def sharing_matrices(self,acc):
         acc=int(acc)
 
-        acc_mask_binaries_dict={k:v for k,v in mask_binaries_dict.items() if str(acc) in k}
+        acc_mask_binaries_dict={k:v for k,v in self.mask_binaries_dict.items() if str(acc) in k}
 
         shared_weights={}
         for idxa,maska_name in enumerate(acc_mask_binaries_dict):
@@ -337,7 +376,7 @@ class MaskAnalysis:
 
         #beautification
         fmt='.1f' #use to get rid of standard form
-        cmap='magma_r'
+        cmap='inferno_r'
 
         plot_kwargs={
             'data':plot_matrix,
@@ -362,23 +401,26 @@ class MaskAnalysis:
         cbar.ax.tick_params(labelsize=15)
 
 
+#%%
 #test
 if 1:
 
-    ckpt_paths=['masks/SCL_80','masks/SCL_70','masks/SCL_60','masks/preprocessing_masks']
+    ckpt_paths=['masks/SCL_90','masks/SCL_70','masks/SCL_50','masks/preprocessing_masks']
 
-    mask_analysis=MaskAnalysis(ckpt_paths=ckpt_paths,preprocessing=True)
+    mask_analysis=MaskAnalysis(ckpt_paths=ckpt_paths,accuracies=[50,70,90],preprocessing=True)
 
     mask_logit_dict=mask_analysis.mask_logit_dict
-    mask_binaries_dict=mask_analysis.mask_binaries_dict
-    layer_names=mask_analysis.layer_names
 
-    if 1:
-        mask_analysis.spatial_distribution_plots(acc=80)
+    mask_binary_dict=mask_analysis.mask_binaries_dict
 
-    if 1:
-        mask_analysis.sharing_matrices(acc=80)
 
-    if 1:
-        mask_analysis.line_plots()
+if 1:
+    mask_analysis.spatial_distribution_plots(acc=50)
+
+if 0:
+    mask_analysis.sharing_matrices(acc=70)
+
+if 0:
+    mask_analysis.line_plots()
+
 
