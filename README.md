@@ -2,7 +2,7 @@
 
 ## Abstract
 
-*We introduce and execute a framework to study how groups of neural network parameters required to execute specific
+We introduce and execute a framework to study how groups of neural network parameters required to execute specific
 tasks (functional modules) develop over the course of training. We study functional module development in neural networks trained on
 abstract visual reasoning (AVR) problems, due to the highly compositional nature of these tasks, which we believe increases the
 likelihood of functional modules developing in the trained weights. To identify the weights that are specialised to a particular task over
@@ -11,7 +11,7 @@ weights in a state-of-the-art AVR model that through successive iterations of st
 task of perceiving shapes in AVR problems. Further analysis shows that these modules comprise only ten percent of the total weights
 in the network and that there is a significant degree of parameter sharing between the functional modules responsible for the
 perception of different shapes. We further make a small number of yet unexplained empirical observations about the properties of
-these functional modules that provide a clear direction for future study.*
+these functional modules that provide a clear direction for future study.
 
 
 
