@@ -7,8 +7,7 @@ tasks (functional modules) develop over the course of training. We study functio
 abstract visual reasoning (AVR) problems, due to the highly compositional nature of these tasks, which we believe increases the
 likelihood of functional modules developing in the trained weights. To identify the weights that are specialised to a particular task over
 training, we use a recently introduced tool that optimises a binary mask on the network weights. Using this tool, we are able to locate
-weights in a state-of-the-art AVR model that through successive iterations of stochastic gradient descent (SGD), are specialised to the
-task of perceiving shapes in AVR problems. Further analysis shows that these modules comprise only ten percent of the total weights
+weights in a state-of-the-art AVR model that are specialised to the task of perceiving shapes in AVR problems. Further analysis shows that these modules comprise only ten percent of the total weights
 in the network and that there is a significant degree of parameter sharing between the functional modules responsible for the
 perception of different shapes. We further make a small number of yet unexplained empirical observations about the properties of
 these functional modules that provide a clear direction for future study.
