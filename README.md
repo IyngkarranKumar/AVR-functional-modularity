@@ -28,11 +28,9 @@ perception of different shapes. We further make a small number of yet unexplaine
 `train_SCL.ipynb` - Trains SCL model on abstract visual reasoning dataset. \
 `utils.py` - Utility functions 
 
-
-<br><br>
+<br>
 
 ## Results overview
-<br>
 
 ### Example AVR problem
 
@@ -57,6 +55,6 @@ We study macroscopic properties of the functional modules, and find that the mod
 ## Weight sharing between functional modules
 
 ![alt text](report_plots/sharing_matrices/SCL_90.png)
-s
+
 The functional modules identified for each shape share a significant fraction of weights with one another, for the most part. This is to be expected - it's likely that there are functions that underlie the processing of *all* shapes.
 
