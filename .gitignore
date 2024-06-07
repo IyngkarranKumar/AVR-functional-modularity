@@ -2,7 +2,7 @@
 __pycache__
 .ipynb_checkpoints
 old_scripts
-datasets
+IRAVEN_datasets
 runs
 wandb
 model_ckpts
