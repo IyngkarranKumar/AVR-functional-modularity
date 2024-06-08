@@ -23,9 +23,12 @@ Description
 
 ## Usage
 
+Install dependencies:
 ```python
-print('hi')
+pip install -r requirements.txt
 ```
+
+
 
 
 ## Results
