@@ -29,36 +29,37 @@ pip install -r requirements.txt
 ```
 <br>
 
-Train a model: 
+Train a model (example for a model with convolutional and regular feed-forward layers): 
 ```python
-model.train()
+model = models.cnn_mlp.CNN_MLP()
 for batch_idx,batch in enumerate(train_dataloader):
     ...
     optimiser.step()
 ```
 <br>
-A version of the model must be implemented that allows the binary weight masking to be applied. The `AbstractMaskedModel` class in `masked_layers.py` provides a framework to do this. You must  implement the forward pass using the masked layers. An example for a CNN:
+A version of the model must then be implemented that allows the binary weight masking to be applied. The `AbstractMaskedModel` class in `masked_layers.py` provides a framework to do this. You must  implement the forward pass using the masked layers. An example for a CN
 
 ```python
-class MaskedMNISTConv(AbstractMaskedModel):
+class MaskedCNN_MLP(AbstractMaskedModel):
     def __init__(self,kwargs):
         super().__init__(**kwargs)
-        #initialise layers with no binary masking
-        self.maxpool_2=nn.MaxPool2d(kernel_size=(2,2))
-        self.conv2_drop=nn.Dropout()
+    def MaskedConvModule(self,x,invert_mask=False):
+        x=self.MaskedConv2d(x,name='conv.conv1',invert=invert_mask)
+        x=F.relu(self.MaskedBatchNorm2d(x,name='conv.batch_norm1',invert=invert_mask))
+        ...
+        x=self.MaskedConv2d(x,name='conv.conv4',invert=invert_mask)
+        x=F.relu(self.MaskedBatchNorm2d(x,name='conv.batch_norm4',invert=invert_mask))
+        x_conv=x.view(x.size()[0],-1)
+        return x_conv
+
     def forward(self,x,invert_mask=False):
+        x=self.MaskedConvModule(x,invert_mask=invert_mask)
+        x=F.relu(self.MaskedLinear(x,name='l1'))
+        x=F.relu(self.MaskedLinear(x,name='l2'))
 
-        self.transform_logit_tensors()
-
-        N=x.size()[0]
-        
-        x=F.relu(self.maxpool_2(self.MaskedConv2d(x,name='conv1',invert=invert_mask)))
-        x=F.relu(self.maxpool_2(self.conv2_drop(self.MaskedConv2d(x,name='conv2',invert=invert_mask))))
-        x=x.view(N,-1)
-        x=F.relu(self.MaskedLinear(x,name='fc1',invert=invert_mask))
-        x=F.dropout(x)
-        x=self.MaskedLinear(x,name='fc2',invert=invert_mask)
         return x
+
+masked_model =  MaskedCNN_MLP(model=model)
 ```
 
 Train masked model:
