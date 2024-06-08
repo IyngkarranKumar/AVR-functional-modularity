@@ -11,19 +11,22 @@ Description
 ## Directory structure
 
 `binary_masks` - Contains the trained binary masks that identify the functional modules \
-`datasets` - Contains the abstract visual reasoning datasets used to train the Scattering Compositional Learner (SCL) network and the binary masks \
 `model_ckpts` - Contains weights of SCL at various points during it's training
-`models` - Implementation of SCL, alongside other models used for testing. \
-`wandb` - WandB log files \
+`models` - Implementation of SCL, and other models used for testing binary masking. \
 `data.py` - Classes for loading the abstract visual reasoning datasets \
 `mask_analysis.py` - Functions for binary mask analysis \
-`mask_SCL.ipynb` - IPython notebook to apply binary weight masking to SCL. \
-`masking.py` - Implements the binary weight masking tool \
-`report.pdf` - Project report \
-`train_SCL.ipynb` - Trains SCL model on abstract visual reasoning dataset. \
+`SCL_masking.ipynb` - Applies binary weight masking to SCL. \
+`masked_layers.py` - Masked layers to build masked models. \
+`report.pdf` - Project report and plots \
+`SCL_training.ipynb` - Trains SCL model on abstract visual reasoning problems. \
 `utils.py` - Utility functions 
 
 ## Usage
+
+```python
+print('hi')
+```
+
 
 ## Results
 
