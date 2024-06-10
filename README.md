@@ -1,6 +1,19 @@
 # Tracking Functional Module Development in Abstract Visual Reasoning Networks
 
-Description
+Code for dissertation: [Functional Module Development in Abstract Visual Reasoning Networks](https://drive.google.com/file/d/1CHhiasb4b5wZ8tKvAXu-2gEgDP7IO4wj/view?usp=sharing).
+
+I train binary weight masks on abstract visual reasoning networks to identify functional modules. 
+
+<figure style="text-align: center;">
+<div style="display: flex; justify-content: space-between;">
+  <img src="report/report_plots/BWM_graphic/Epoch_0.png" alt="Epoch 0" width="30%" />
+  <img src="report/report_plots/BWM_graphic/Epoch_10.png" alt="Epoch 10" width="30%" />
+  <img src="report/report_plots/BWM_graphic/Epoch_50.png" alt="Epoch 50" width="30%" />
+</div>
+  <figcaption>The binary masking process gradually zero-ablates the weights that are not sufficiently important to execute a task, thereby identifying the functional module for that task.</figcaption>
+</figure>
+
+
 <br><br>
 
 ## Contents
@@ -10,7 +23,7 @@ Description
 
 ## Directory structure
 
-`binary_masks` - Contains the trained binary masks that identify the functional modules \
+`binary_masks` - Contains the trained binary masks that identify the functional modules in SCL. \
 `model_ckpts` - Contains weights of SCL at various points during it's training
 `models` - Implementation of SCL, and other models used for testing binary masking. \
 `data.py` - Classes for loading the abstract visual reasoning datasets \
@@ -20,6 +33,8 @@ Description
 `report.pdf` - Project report and plots \
 `SCL_training.ipynb` - Trains SCL model on abstract visual reasoning problems. \
 `utils.py` - Utility functions 
+
+<br>
 
 ## Usage
 
@@ -37,7 +52,7 @@ for batch_idx,batch in enumerate(train_dataloader):
     optimiser.step()
 ```
 <br>
-A version of the model must then be implemented that allows the binary weight masking to be applied. The `AbstractMaskedModel` class in `masked_layers.py` provides a framework to do this. You must  implement the forward pass using the masked layers. An example for a CN
+A version of the model must then be implemented that allows the binary weight masking to be applied. The `AbstractMaskedModel` class in `masked_layers.py` provides a framework to do this. The key step is to implement the forward pass using the masked layers. An example for the CNN_MLP model above:
 
 ```python
 class MaskedCNN_MLP(AbstractMaskedModel):
@@ -67,11 +82,12 @@ Train masked model:
 masked_model.train()
 ```
 
-Get binary masks for analysis:
+Get the binary masks:
 ```python
 binary_masks = masked_model.binaries
 ```
 
+Tools for analysing the binary masks are provided in `mask_analysis.py`.  
 
 <br>
 
