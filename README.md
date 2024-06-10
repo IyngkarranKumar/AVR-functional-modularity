@@ -13,13 +13,12 @@ I train binary weight masks on abstract visual reasoning (AVR)networks to identi
   <figcaption>The binary masking process gradually zero-ablates the weights that are not required to execute a task, thereby finding the functional module for that task.</figcaption>
 </figure>
 
-<figure style="text-align: center;">
-<div style="display: flex; justify-content: space-between;">
-  <img src="report/report_plots/problem_instances/related_work_example_6x6_adj1.png" alt="Epoch 10" width="45%" />
-  <img src="report/report_plots/problem_instances/hexagons.png" alt="Epoch 50" width="45%" />
-</div>
-  <figcaption>Typical abstract visual reasoning problems contains various different shapes. In this work the binary masks are trained on AVR problems with fixed shape, in order to find the functional modules that are responsible for processing each shape.</figcaption>
-</figure>
+<br>
+
+Typical abstract visual reasoning problems contain various shapes ([see here](https://github.com/WellyZhang/RAVEN)). In this work the binary masks are trained on AVR problems with a fixed shape (below), in order to find the functional module responsible for processing that shape. This is repeated at various stages of model training to see how the functional modules *evolve* over training.
+
+ <br>
+![alt text](report/report_plots/problem_instances/squares.png)
 
 
 
