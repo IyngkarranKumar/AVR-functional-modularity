@@ -2,7 +2,7 @@
 
 Code for dissertation: [Functional Module Development in Abstract Visual Reasoning Networks](https://drive.google.com/file/d/1CHhiasb4b5wZ8tKvAXu-2gEgDP7IO4wj/view?usp=sharing).
 
-I train binary weight masks on abstract visual reasoning networks to identify functional modules. 
+I train binary weight masks on abstract visual reasoning (AVR)networks to identify functional modules. 
 
 <figure style="text-align: center;">
 <div style="display: flex; justify-content: space-between;">
@@ -10,8 +10,17 @@ I train binary weight masks on abstract visual reasoning networks to identify fu
   <img src="report/report_plots/BWM_graphic/Epoch_10.png" alt="Epoch 10" width="30%" />
   <img src="report/report_plots/BWM_graphic/Epoch_50.png" alt="Epoch 50" width="30%" />
 </div>
-  <figcaption>The binary masking process gradually zero-ablates the weights that are not sufficiently important to execute a task, thereby identifying the functional module for that task.</figcaption>
+  <figcaption>The binary masking process gradually zero-ablates the weights that are not required to execute a task, thereby finding the functional module for that task.</figcaption>
 </figure>
+
+<figure style="text-align: center;">
+<div style="display: flex; justify-content: space-between;">
+  <img src="report/report_plots/problem_instances/related_work_example_6x6_adj1.png" alt="Epoch 10" width="45%" />
+  <img src="report/report_plots/problem_instances/hexagons.png" alt="Epoch 50" width="45%" />
+</div>
+  <figcaption>Typical abstract visual reasoning problems contains various different shapes. In this work the binary masks are trained on AVR problems with fixed shape, in order to find the functional modules that are responsible for processing each shape.</figcaption>
+</figure>
+
 
 
 <br><br>
