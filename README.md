@@ -14,18 +14,12 @@ I train binary weight masks on abstract visual reasoning (AVR) networks to ident
 
 The binary masking process gradually zero-ablates the weights that are not required to execute a task, thereby finding the functional module for that task.
 
-<br>
-
 Typical abstract visual reasoning problems contain various shapes ([see here](https://github.com/WellyZhang/RAVEN)). In this work the binary masks are trained on AVR problems with a fixed shape (below), in order to find the functional module responsible for processing that shape. This is repeated at various stages of model training to see how the functional modules *evolve* over training.
-
- <br>
-
 ![alt text](report/report_plots/problem_instances/squares.png)
 
 
 The analysis is done for a state-of-the-art AVR network, the [Scattering Compositional Learner](https://arxiv.org/abs/2007.04212). Future work would extend this to other AVR models, and then models trained on date from other modalities. 
 
-<br>
 
 ## Contents
 1. [Directory structure](##directory-structure)
@@ -44,7 +38,6 @@ The analysis is done for a state-of-the-art AVR network, the [Scattering Composi
 `SCL_training.ipynb` - Trains SCL model on abstract visual reasoning problems. \
 `utils.py` - Utility functions 
 
-<br>
 
 ## Usage
 
@@ -52,7 +45,6 @@ Install dependencies:
 ```python
 pip install -r requirements.txt
 ```
-<br>
 
 Train a model (example for a model with convolutional and regular feed-forward layers): 
 ```python
