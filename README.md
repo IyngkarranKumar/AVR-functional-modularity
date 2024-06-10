@@ -2,7 +2,7 @@
 
 Code for dissertation: [Functional Module Development in Abstract Visual Reasoning Networks](https://drive.google.com/file/d/1CHhiasb4b5wZ8tKvAXu-2gEgDP7IO4wj/view?usp=sharing).
 
-I train binary weight masks on abstract visual reasoning (AVR) networks to identify functional modules (specialised groups of weights).
+I train binary weight masks on abstract visual reasoning (AVR) networks to identify specialised groups of weights - AKA functional modules.
 
 <figure style="text-align: center;">
 <div style="display: flex; justify-content: space-between;">
