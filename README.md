@@ -2,7 +2,7 @@
 
 Code for dissertation: [Functional Module Development in Abstract Visual Reasoning Networks](https://drive.google.com/file/d/1CHhiasb4b5wZ8tKvAXu-2gEgDP7IO4wj/view?usp=sharing).
 
-I train binary weight masks on abstract visual reasoning (AVR)networks to identify functional modules. 
+I train binary weight masks on abstract visual reasoning (AVR) networks to identify functional modules (specialised groups of weights).
 
 <figure style="text-align: center;">
 <div style="display: flex; justify-content: space-between;">
@@ -10,19 +10,22 @@ I train binary weight masks on abstract visual reasoning (AVR)networks to identi
   <img src="report/report_plots/BWM_graphic/Epoch_10.png" alt="Epoch 10" width="30%" />
   <img src="report/report_plots/BWM_graphic/Epoch_50.png" alt="Epoch 50" width="30%" />
 </div>
-  <figcaption>The binary masking process gradually zero-ablates the weights that are not required to execute a task, thereby finding the functional module for that task.</figcaption>
 </figure>
+
+The binary masking process gradually zero-ablates the weights that are not required to execute a task, thereby finding the functional module for that task.
 
 <br>
 
 Typical abstract visual reasoning problems contain various shapes ([see here](https://github.com/WellyZhang/RAVEN)). In this work the binary masks are trained on AVR problems with a fixed shape (below), in order to find the functional module responsible for processing that shape. This is repeated at various stages of model training to see how the functional modules *evolve* over training.
 
  <br>
+
 ![alt text](report/report_plots/problem_instances/squares.png)
 
 
+The analysis is done for a state-of-the-art AVR network, the [Scattering Compositional Learner](https://arxiv.org/abs/2007.04212). Future work would extend this to other AVR models, and then models trained on date from other modalities. 
 
-<br><br>
+<br>
 
 ## Contents
 1. [Directory structure](##directory-structure)
@@ -32,13 +35,12 @@ Typical abstract visual reasoning problems contain various shapes ([see here](ht
 ## Directory structure
 
 `binary_masks` - Contains the trained binary masks that identify the functional modules in SCL. \
-`model_ckpts` - Contains weights of SCL at various points during it's training
-`models` - Implementation of SCL, and other models used for testing binary masking. \
+`models` - Implementation of SCL and some standard neural network architecture, as well as model checkpoints captured at various stages of SCL's training.  \
 `data.py` - Classes for loading the abstract visual reasoning datasets \
 `mask_analysis.py` - Functions for binary mask analysis \
 `SCL_masking.ipynb` - Applies binary weight masking to SCL. \
-`masked_layers.py` - Masked layers to build masked models. \
-`report.pdf` - Project report and plots \
+`masked_layers.py` - Masked layers and masked models. \
+`report` - Project report and plots. \
 `SCL_training.ipynb` - Trains SCL model on abstract visual reasoning problems. \
 `utils.py` - Utility functions 
 
@@ -101,12 +103,6 @@ Tools for analysing the binary masks are provided in `mask_analysis.py`.
 
 
 ## Results
-
-#### Example AVR problem
-
-![alt text](report/report_plots/problem_instances/2x2_grid_originals.png)
-
-An example of an AVR problem. In this study we look to identify groups of weights that are responsible for processing shapes (e.g: circles, squares) *and* track the development of these weights over training. <br><br>
 
 
 #### Verification of the weight masking algorithm
